@@ -2800,6 +2800,10 @@ _PySys_InitCore(_PyRuntimeState *runtime, PyInterpreterState *interp,
                         PyUnicode_FromString(ABIFLAGS));
 #endif
 
+    /* platlibdir is used in pypa/distutils */
+    SET_SYS_FROM_STRING("platlibdir",
+                        PyUnicode_FromString("lib64"));
+
     /* version_info */
     if (VersionInfoType.tp_name == NULL) {
         if (PyStructSequence_InitType2(&VersionInfoType,
