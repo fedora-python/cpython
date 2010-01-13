@@ -143,7 +143,7 @@ LIBDIR=		@libdir@
 MANDIR=		@mandir@
 INCLUDEDIR=	@includedir@
 CONFINCLUDEDIR=	$(exec_prefix)/include
-SCRIPTDIR=	$(prefix)/lib
+SCRIPTDIR=	$(prefix)/lib64
 ABIFLAGS=	@ABIFLAGS@
 
 # Detailed destination directories
