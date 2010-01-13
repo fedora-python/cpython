@@ -810,7 +810,7 @@ calculate_exec_prefix(PyCalculatePath *calculate, _PyPathConfig *pathconfig)
         }
 
         calculate->exec_prefix = joinpath2(calculate->exec_prefix_macro,
-                                           L"lib/lib-dynload");
+                                           L"lib64/lib-dynload");
         if (calculate->exec_prefix == NULL) {
             return _PyStatus_NO_MEMORY();
         }
@@ -1284,7 +1284,7 @@ calculate_read_pyenv(PyCalculatePath *calculate)
 static PyStatus
 calculate_zip_path(PyCalculatePath *calculate)
 {
-    const wchar_t *lib_python = L"lib/python00.zip";
+    const wchar_t *lib_python = L"lib64/python00.zip";
 
     if (calculate->prefix_found > 0) {
         /* Use the reduced prefix returned by Py_GetPrefix()
@@ -1435,7 +1435,7 @@ calculate_init(PyCalculatePath *calculate, const PyConfig *config)
         return DECODE_LOCALE_ERR("VPATH macro", len);
     }
 
-    calculate->lib_python = Py_DecodeLocale("lib/python" VERSION, &len);
+    calculate->lib_python = Py_DecodeLocale("lib64/python" VERSION, &len);
     if (!calculate->lib_python) {
         return DECODE_LOCALE_ERR("EXEC_PREFIX macro", len);
     }
