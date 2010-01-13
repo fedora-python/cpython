@@ -688,7 +688,7 @@ calculate_exec_prefix(const _PyCoreConfig *core_config,
         if (safe_wcscpy(exec_prefix, calculate->exec_prefix, exec_prefix_len) < 0) {
             return PATHLEN_ERR();
         }
-        err = joinpath(exec_prefix, L"lib/lib-dynload", exec_prefix_len);
+        err = joinpath(exec_prefix, L"lib64/lib-dynload", exec_prefix_len);
         if (_Py_INIT_FAILED(err)) {
             return err;
         }
@@ -1015,7 +1015,7 @@ calculate_zip_path(PyCalculatePath *calculate, const wchar_t *prefix)
             return PATHLEN_ERR();
         }
     }
-    err = joinpath(calculate->zip_path, L"lib/python00.zip", zip_path_len);
+    err = joinpath(calculate->zip_path, L"lib64/python00.zip", zip_path_len);
     if (_Py_INIT_FAILED(err)) {
         return err;
     }
@@ -1144,7 +1144,7 @@ calculate_init(PyCalculatePath *calculate,
     if (!calculate->prefix) {
         return DECODE_LOCALE_ERR("EXEC_PREFIX define", len);
     }
-    calculate->lib_python = Py_DecodeLocale("lib/python" VERSION, &len);
+    calculate->lib_python = Py_DecodeLocale("lib64/python" VERSION, &len);
     if (!calculate->lib_python) {
         return DECODE_LOCALE_ERR("EXEC_PREFIX define", len);
     }
