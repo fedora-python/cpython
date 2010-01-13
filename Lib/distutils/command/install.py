@@ -30,14 +30,14 @@ WINDOWS_SCHEME = {
 INSTALL_SCHEMES = {
     'unix_prefix': {
         'purelib': '$base/lib/python$py_version_short/site-packages',
-        'platlib': '$platbase/lib/python$py_version_short/site-packages',
+        'platlib': '$platbase/lib64/python$py_version_short/site-packages',
         'headers': '$base/include/python$py_version_short$abiflags/$dist_name',
         'scripts': '$base/bin',
         'data'   : '$base',
         },
     'unix_home': {
         'purelib': '$base/lib/python',
-        'platlib': '$base/lib/python',
+        'platlib': '$base/lib64/python',
         'headers': '$base/include/python/$dist_name',
         'scripts': '$base/bin',
         'data'   : '$base',
