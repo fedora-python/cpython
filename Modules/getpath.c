@@ -730,7 +730,7 @@ calculate_exec_prefix(PyCalculatePath *calculate, _PyPathConfig *pathconfig,
         if (safe_wcscpy(exec_prefix, calculate->exec_prefix, exec_prefix_len) < 0) {
             return PATHLEN_ERR();
         }
-        status = joinpath(exec_prefix, L"lib/lib-dynload", exec_prefix_len);
+        status = joinpath(exec_prefix, L"lib64/lib-dynload", exec_prefix_len);
         if (_PyStatus_EXCEPTION(status)) {
             return status;
         }
@@ -1063,7 +1063,7 @@ calculate_zip_path(PyCalculatePath *calculate, const wchar_t *prefix,
             return PATHLEN_ERR();
         }
     }
-    status = joinpath(zip_path, L"lib/python00.zip", zip_path_len);
+    status = joinpath(zip_path, L"lib64/python00.zip", zip_path_len);
     if (_PyStatus_EXCEPTION(status)) {
         return status;
     }
@@ -1193,7 +1193,7 @@ calculate_init(PyCalculatePath *calculate, const PyConfig *config)
     if (!calculate->exec_prefix) {
         return DECODE_LOCALE_ERR("EXEC_PREFIX define", len);
     }
-    calculate->lib_python = Py_DecodeLocale("lib/python" VERSION, &len);
+    calculate->lib_python = Py_DecodeLocale("lib64/python" VERSION, &len);
     if (!calculate->lib_python) {
         return DECODE_LOCALE_ERR("EXEC_PREFIX define", len);
     }
