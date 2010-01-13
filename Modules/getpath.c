@@ -535,7 +535,7 @@ calculate_exec_prefix(const _PyCoreConfig *core_config,
                 "Could not find platform dependent libraries <exec_prefix>\n");
         }
         wcsncpy(exec_prefix, calculate->exec_prefix, MAXPATHLEN);
-        joinpath(exec_prefix, L"lib/lib-dynload");
+        joinpath(exec_prefix, L"lib64/lib-dynload");
     }
     /* If we found EXEC_PREFIX do *not* reduce it!  (Yet.) */
 }
@@ -783,7 +783,7 @@ calculate_zip_path(PyCalculatePath *calculate, const wchar_t *prefix)
     else {
         wcsncpy(calculate->zip_path, calculate->prefix, MAXPATHLEN);
     }
-    joinpath(calculate->zip_path, L"lib/python00.zip");
+    joinpath(calculate->zip_path, L"lib64/python00.zip");
 
     /* Replace "00" with version */
     size_t bufsz = wcslen(calculate->zip_path);
@@ -908,7 +908,7 @@ calculate_init(PyCalculatePath *calculate,
     if (!calculate->exec_prefix) {
         return DECODE_LOCALE_ERR("EXEC_PREFIX define", len);
     }
-    calculate->lib_python = Py_DecodeLocale("lib/python" VERSION, &len);
+    calculate->lib_python = Py_DecodeLocale("lib64/python" VERSION, &len);
     if (!calculate->lib_python) {
         return DECODE_LOCALE_ERR("EXEC_PREFIX define", len);
     }
