@@ -1375,6 +1375,9 @@
 /* Define if you want to compile in Python-specific mallocs */
 #undef WITH_PYMALLOC
 
+/* Define if you want to compile in SystemTap support */
+#undef WITH_SYSTEMTAP
+
 /* Define if you want to compile in rudimentary thread support */
 #undef WITH_THREAD
 

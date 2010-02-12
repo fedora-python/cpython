@@ -642,6 +642,8 @@ TRUE
 MACHDEP_OBJS
 DYNLOADFILE
 DLINCLDIR
+SYSTEMTAPDEPS
+SYSTEMTAPOBJS
 THREADOBJ
 LDLAST
 USE_THREAD_MODULE
@@ -834,6 +836,7 @@ with_doc_strings
 with_tsc
 with_pymalloc
 with_valgrind
+with_systemtap
 with_fpectl
 with_libm
 with_libc
@@ -1528,6 +1531,7 @@ Optional Packages:
   --with(out)-tsc         enable/disable timestamp counter profile
   --with(out)-pymalloc    disable/enable specialized mallocs
   --with-valgrind         Enable Valgrind support
+  --with(out)-systemtap   disable/enable SystemTap support
   --with-fpectl           enable SIGFPE catching
   --with-libm=STRING      math library
   --with-libc=STRING      C library
@@ -11179,6 +11183,31 @@ fi
 
     OPT="-DDYNAMIC_ANNOTATIONS_ENABLED=1 $OPT"
 fi
+
+# Check for systemtap support
+# On Linux, /usr/bin/dtrace is in fact a shim to SystemTap
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for --with-systemtap" >&5
+$as_echo_n "checking for --with-systemtap... " >&6; }
+
+# Check whether --with-systemtap was given.
+if test "${with_systemtap+set}" = set; then :
+  withval=$with_systemtap;
+else
+  with_systemtap=no
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $with_systemtap" >&5
+$as_echo "$with_systemtap" >&6; }
+if test "$with_systemtap" != no; then
+
+$as_echo "#define WITH_SYSTEMTAP 1" >>confdefs.h
+
+    SYSTEMTAPOBJS="Python/pysystemtap.o"
+    SYSTEMTAPDEPS="\$(srcdir)/Python/pysystemtap.h"
+fi
+
+
+
 
 # -I${DLINCLDIR} is added to the compile rule for importdl.o
 
