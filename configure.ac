@@ -3288,6 +3288,23 @@ if test "$with_valgrind" != no; then
     OPT="-DDYNAMIC_ANNOTATIONS_ENABLED=1 $OPT"
 fi
 
+# Check for systemtap support
+# On Linux, /usr/bin/dtrace is in fact a shim to SystemTap
+AC_MSG_CHECKING([for --with-systemtap])
+AC_ARG_WITH([systemtap],
+            AC_HELP_STRING([--with(out)-systemtap], [disable/enable SystemTap support]),,
+            with_systemtap=no)
+AC_MSG_RESULT([$with_systemtap])
+if test "$with_systemtap" != no; then
+    AC_DEFINE(WITH_SYSTEMTAP, 1,
+        [Define if you want to compile in SystemTap support])
+    SYSTEMTAPOBJS="Python/pysystemtap.o"
+    SYSTEMTAPDEPS="\$(srcdir)/Python/pysystemtap.h"
+fi
+
+AC_SUBST(SYSTEMTAPOBJS)
+AC_SUBST(SYSTEMTAPDEPS)
+
 # -I${DLINCLDIR} is added to the compile rule for importdl.o
 AC_SUBST(DLINCLDIR)
 DLINCLDIR=.

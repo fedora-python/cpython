@@ -20,6 +20,8 @@
 
 #include <ctype.h>
 
+#include "ceval_systemtap.h"
+
 #ifndef WITH_TSC
 
 #define READ_TIMESTAMP(var)
@@ -1158,6 +1160,10 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throwflag)
                 goto exit_eval_frame;
             }
         }
+    }
+
+    if (PYTHON_FUNCTION_ENTRY_ENABLED()) {
+        systemtap_function_entry(f);
     }
 
     co = f->f_code;
@@ -3678,6 +3684,11 @@ fast_yield:
 
     /* pop frame */
 exit_eval_frame:
+
+    if (PYTHON_FUNCTION_RETURN_ENABLED()) {
+        systemtap_function_return(f);
+    }
+
     Py_LeaveRecursiveCall();
     f->f_executing = 0;
     tstate->frame = f->f_back;
