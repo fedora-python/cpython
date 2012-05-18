@@ -94,9 +94,9 @@ class PwdTest(unittest.TestCase):
         # In some cases, byuids isn't a complete list of all users in the
         # system, so if we try to pick a value not in byuids (via a perturbing
         # loop, say), pwd.getpwuid() might still be able to find data for that
-        # uid. Using sys.maxint may provoke the same problems, but hopefully
+        # uid. Using 2**32 - 2 may provoke the same problems, but hopefully
         # it will be a more repeatable failure.
-        fakeuid = sys.maxsize
+        fakeuid = 2**32 - 2
         self.assertNotIn(fakeuid, byuids)
         self.assertRaises(KeyError, pwd.getpwuid, fakeuid)
 
