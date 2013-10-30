@@ -69,6 +69,10 @@ class PyCompileTests(unittest.TestCase):
         self.assertTrue(os.path.exists(self.pyc_path))
         self.assertFalse(os.path.exists(self.cache_path))
 
+    def test_bad_coding(self):
+        bad_coding = os.path.join(os.path.dirname(__file__), 'bad_coding2.py')
+        self.assertIsNone(py_compile.compile(bad_coding, doraise=False))
+
     def test_relative_path(self):
         py_compile.compile(os.path.relpath(self.source_path),
                            os.path.relpath(self.pyc_path))
