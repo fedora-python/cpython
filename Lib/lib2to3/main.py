@@ -213,6 +213,7 @@ def main(fixer_pkg, args=None):
 
     # Set up logging handler
     level = logging.DEBUG if options.verbose else logging.INFO
+    logging.root.handlers = []
     logging.basicConfig(format='%(name)s: %(message)s', level=level)
     logger = logging.getLogger('lib2to3.main')
 
