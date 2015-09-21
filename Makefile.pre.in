@@ -1371,7 +1371,7 @@ inclinstall:
 
 # Install the library and miscellaneous stuff needed for extending/embedding
 # This goes into $(exec_prefix)
-LIBPL=		@LIBPL@
+LIBPL=		$(LIBDEST)/config-$(LDVERSION)
 
 # pkgconfig directory
 LIBPC=		$(LIBDIR)/pkgconfig
