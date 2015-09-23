@@ -782,9 +782,9 @@ cat >> conftest.c <<EOF
         alpha-linux-gnu
 # elif defined(__ARM_EABI__) && defined(__ARM_PCS_VFP)
 #  if defined(__ARMEL__)
-        arm-linux-gnueabihf
+        arm-linux-gnueabi
 #  else
-        armeb-linux-gnueabihf
+        armeb-linux-gnueabi
 #  endif
 # elif defined(__ARM_EABI__) && !defined(__ARM_PCS_VFP)
 #  if defined(__ARMEL__)
