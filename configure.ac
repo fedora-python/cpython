@@ -824,9 +824,9 @@ cat >> conftest.c <<EOF
         powerpc-linux-gnuspe
 # elif defined(__powerpc64__)
 #  if defined(__LITTLE_ENDIAN__)
-        powerpc64le-linux-gnu
+        ppc64le-linux-gnu
 #  else
-        powerpc64-linux-gnu
+        ppc64-linux-gnu
 #  endif
 # elif defined(__powerpc__)
         powerpc-linux-gnu
