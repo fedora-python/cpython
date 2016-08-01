@@ -804,7 +804,7 @@ cat >> conftest.c <<EOF
 #  elif _MIPS_SIM == _ABIN32
         mips64el-linux-gnuabin32
 #  elif _MIPS_SIM == _ABI64
-        mips64el-linux-gnuabi64
+        mips64el-linux-gnu
 #  else
 #   error unknown platform triplet
 #  endif
@@ -814,7 +814,7 @@ cat >> conftest.c <<EOF
 #  elif _MIPS_SIM == _ABIN32
         mips64-linux-gnuabin32
 #  elif _MIPS_SIM == _ABI64
-        mips64-linux-gnuabi64
+        mips64-linux-gnu
 #  else
 #   error unknown platform triplet
 #  endif
