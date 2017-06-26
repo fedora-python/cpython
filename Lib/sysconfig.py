@@ -86,6 +86,22 @@ _INSTALL_SCHEMES = {
         },
     }
 
+# Force pip to use distutils paths instead of sysconfig
+# https://github.com/pypa/pip/issues/10647
+_PIP_USE_SYSCONFIG = False
+
+# This is used by distutils.command.install in the stdlib
+# as well as pypa/distutils (e.g. bundled in setuptools).
+# The self.prefix value is set to sys.prefix + /local/
+# if neither RPM build nor virtual environment is
+# detected to make distutils install packages
+# into the separate location.
+# https://fedoraproject.org/wiki/Changes/Making_sudo_pip_safe
+if (not (hasattr(sys, 'real_prefix') or
+    sys.prefix != sys.base_prefix) and
+    'RPM_BUILD_ROOT' not in os.environ):
+    _prefix_addition = "/local"
+
 _SCHEME_KEYS = ('stdlib', 'platstdlib', 'purelib', 'platlib', 'include',
                 'scripts', 'data')
 
