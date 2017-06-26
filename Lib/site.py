@@ -357,7 +357,14 @@ def getsitepackages(prefixes=None):
     return sitepackages
 
 def addsitepackages(known_paths, prefixes=None):
-    """Add site-packages to sys.path"""
+    """Add site-packages to sys.path
+
+    '/usr/local' is included in PREFIXES if RPM build is not detected
+    to make packages installed into this location visible.
+
+    """
+    if ENABLE_USER_SITE and 'RPM_BUILD_ROOT' not in os.environ:
+        PREFIXES.insert(0, "/usr/local")
     for sitedir in getsitepackages(prefixes):
         if os.path.isdir(sitedir):
             addsitedir(sitedir, known_paths)
