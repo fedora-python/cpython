@@ -418,8 +418,19 @@ class install(Command):
                     raise DistutilsOptionError(
                           "must not supply exec-prefix without prefix")
 
-                self.prefix = os.path.normpath(sys.prefix)
-                self.exec_prefix = os.path.normpath(sys.exec_prefix)
+                # self.prefix is set to sys.prefix + /local/
+                # if neither RPM build nor virtual environment is
+                # detected to make pip and distutils install packages
+                # into the separate location.
+                if (not (hasattr(sys, 'real_prefix') or
+                    sys.prefix != sys.base_prefix) and
+                    'RPM_BUILD_ROOT' not in os.environ):
+                    addition = "/local"
+                else:
+                    addition = ""
+
+                self.prefix = os.path.normpath(sys.prefix) + addition
+                self.exec_prefix = os.path.normpath(sys.exec_prefix) + addition
 
             else:
                 if self.exec_prefix is None:
