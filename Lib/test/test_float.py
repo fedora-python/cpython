@@ -120,6 +120,7 @@ class GeneralFloatCases(unittest.TestCase):
         # non-UTF-8 byte string
         check(b'123\xa0')
 
+    @unittest.skip('Fails in Koji: https://bugzilla.redhat.com/show_bug.cgi?id=1484497')
     @support.run_with_locale('LC_NUMERIC', 'fr_FR', 'de_DE')
     def test_float_with_comma(self):
         # set locale to something that doesn't use '.' for the decimal point
