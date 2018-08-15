@@ -1,16 +1,27 @@
+import distutils.version
+import glob
 import os
 import os.path
-import pkgutil
 import sys
 import tempfile
 
 
 __all__ = ["version", "bootstrap"]
 
+_WHEEL_DIR = "/usr/share/python-wheels/"
 
-_SETUPTOOLS_VERSION = "41.0.1"
 
-_PIP_VERSION = "19.2.1"
+def _get_most_recent_wheel_version(pkg):
+    prefix = os.path.join(_WHEEL_DIR, "{}-".format(pkg))
+    suffix = "-py2.py3-none-any.whl"
+    pattern = "{}*{}".format(prefix, suffix)
+    versions = (p[len(prefix):-len(suffix)] for p in glob.glob(pattern))
+    return str(max(versions, key=distutils.version.LooseVersion))
+
+
+_SETUPTOOLS_VERSION = _get_most_recent_wheel_version("setuptools")
+
+_PIP_VERSION = _get_most_recent_wheel_version("pip")
 
 _PROJECTS = [
     ("setuptools", _SETUPTOOLS_VERSION),
@@ -96,12 +107,9 @@ def _bootstrap(*, root=None, upgrade=False, user=False,
         additional_paths = []
         for project, version in _PROJECTS:
             wheel_name = "{}-{}-py2.py3-none-any.whl".format(project, version)
-            whl = pkgutil.get_data(
-                "ensurepip",
-                "_bundled/{}".format(wheel_name),
-            )
-            with open(os.path.join(tmpdir, wheel_name), "wb") as fp:
-                fp.write(whl)
+            with open(os.path.join(_WHEEL_DIR, wheel_name), "rb") as sfp:
+                with open(os.path.join(tmpdir, wheel_name), "wb") as fp:
+                    fp.write(sfp.read())
 
             additional_paths.append(os.path.join(tmpdir, wheel_name))
 
