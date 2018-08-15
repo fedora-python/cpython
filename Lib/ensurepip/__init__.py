@@ -1,6 +1,7 @@
+import distutils.version
+import glob
 import os
 import os.path
-import pkgutil
 import sys
 import runpy
 import tempfile
@@ -9,8 +10,26 @@ import subprocess
 
 __all__ = ["version", "bootstrap"]
 _PACKAGE_NAMES = ('setuptools', 'pip')
-_SETUPTOOLS_VERSION = "56.0.0"
-_PIP_VERSION = "23.0.1"
+
+_WHEEL_DIR = "/usr/share/python-wheels/"
+
+_wheels = {}
+
+def _get_most_recent_wheel_version(pkg):
+    prefix = os.path.join(_WHEEL_DIR, "{}-".format(pkg))
+    _wheels[pkg] = {}
+    for suffix in "-py2.py3-none-any.whl", "-py3-none-any.whl":
+        pattern = "{}*{}".format(prefix, suffix)
+        for path in glob.glob(pattern):
+            version_str = path[len(prefix):-len(suffix)]
+            _wheels[pkg][version_str] = os.path.basename(path)
+    return str(max(_wheels[pkg], key=distutils.version.LooseVersion))
+
+
+_SETUPTOOLS_VERSION = _get_most_recent_wheel_version("setuptools")
+
+_PIP_VERSION = _get_most_recent_wheel_version("pip")
+
 _PROJECTS = [
     ("setuptools", _SETUPTOOLS_VERSION, "py3"),
     ("pip", _PIP_VERSION, "py3"),
@@ -104,13 +123,10 @@ def _bootstrap(*, root=None, upgrade=False, user=False,
         # additional paths that need added to sys.path
         additional_paths = []
         for project, version, py_tag in _PROJECTS:
-            wheel_name = "{}-{}-{}-none-any.whl".format(project, version, py_tag)
-            whl = pkgutil.get_data(
-                "ensurepip",
-                "_bundled/{}".format(wheel_name),
-            )
-            with open(os.path.join(tmpdir, wheel_name), "wb") as fp:
-                fp.write(whl)
+            wheel_name = _wheels[project][version]
+            with open(os.path.join(_WHEEL_DIR, wheel_name), "rb") as sfp:
+                with open(os.path.join(tmpdir, wheel_name), "wb") as fp:
+                    fp.write(sfp.read())
 
             additional_paths.append(os.path.join(tmpdir, wheel_name))
 
