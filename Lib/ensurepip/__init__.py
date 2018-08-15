@@ -1,16 +1,31 @@
+import distutils.version
+import glob
 import os
 import os.path
-import pkgutil
 import sys
 import tempfile
 
 
 __all__ = ["version", "bootstrap"]
 
+_WHEEL_DIR = "/usr/share/python-wheels/"
 
-_SETUPTOOLS_VERSION = "28.8.0"
+_wheels = {}
 
-_PIP_VERSION = "9.0.1"
+def _get_most_recent_wheel_version(pkg):
+    prefix = os.path.join(_WHEEL_DIR, "{}-".format(pkg))
+    _wheels[pkg] = {}
+    for suffix in "-py2.py3-none-any.whl", "-py3-none-any.whl":
+        pattern = "{}*{}".format(prefix, suffix)
+        for path in glob.glob(pattern):
+            version_str = path[len(prefix):-len(suffix)]
+            _wheels[pkg][version_str] = os.path.basename(path)
+    return str(max(_wheels[pkg], key=distutils.version.LooseVersion))
+
+
+_SETUPTOOLS_VERSION = _get_most_recent_wheel_version("setuptools")
+
+_PIP_VERSION = _get_most_recent_wheel_version("pip")
 
 # pip currently requires ssl support, so we try to provide a nicer
 # error message when that is missing (http://bugs.python.org/issue19744)
@@ -37,8 +52,13 @@ def _run_pip(args, additional_paths=None):
         sys.path = additional_paths + sys.path
 
     # Install the bundled software
-    import pip
-    pip.main(args)
+    try:
+        # pip 10
+        from pip._internal import main
+    except ImportError:
+        # pip 9
+        from pip import main
+    main(args)
 
 
 def version():
@@ -92,13 +112,10 @@ def bootstrap(*, root=None, upgrade=False, user=False,
         # additional paths that need added to sys.path
         additional_paths = []
         for project, version in _PROJECTS:
-            wheel_name = "{}-{}-py2.py3-none-any.whl".format(project, version)
-            whl = pkgutil.get_data(
-                "ensurepip",
-                "_bundled/{}".format(wheel_name),
-            )
-            with open(os.path.join(tmpdir, wheel_name), "wb") as fp:
-                fp.write(whl)
+            wheel_name = _wheels[project][version]
+            with open(os.path.join(_WHEEL_DIR, wheel_name), "rb") as sfp:
+                with open(os.path.join(tmpdir, wheel_name), "wb") as fp:
+                    fp.write(sfp.read())
 
             additional_paths.append(os.path.join(tmpdir, wheel_name))
 
