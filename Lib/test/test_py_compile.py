@@ -19,6 +19,7 @@ def without_source_date_epoch(fxn):
     def wrapper(*args, **kwargs):
         with os_helper.EnvironmentVarGuard() as env:
             env.unset('SOURCE_DATE_EPOCH')
+            env.unset('RPM_BUILD_ROOT')
             return fxn(*args, **kwargs)
     return wrapper
 
@@ -29,6 +30,7 @@ def with_source_date_epoch(fxn):
     def wrapper(*args, **kwargs):
         with os_helper.EnvironmentVarGuard() as env:
             env['SOURCE_DATE_EPOCH'] = '123456789'
+            env.unset('RPM_BUILD_ROOT')
             return fxn(*args, **kwargs)
     return wrapper
 
