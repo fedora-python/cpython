@@ -844,6 +844,14 @@ Constants
 
    .. versionadded:: 3.6
 
+.. data:: OP_IGNORE_UNEXPECTED_EOF
+
+   Ignore unexpected shutdown of TLS connections.
+
+   This option is only available with OpenSSL 3.0.0 and later.
+
+   .. versionadded:: 3.6.15-27
+
 .. data:: HAS_ALPN
 
    Whether the OpenSSL library has built-in support for the *Application-Layer
@@ -1142,6 +1150,9 @@ SSL sockets also have the following additional methods and attributes:
       :exc:`ValueError` is raised when the handshake isn't done.
       The returned dictionary includes additional X509v3 extension items
         such as ``crlDistributionPoints``, ``caIssuers`` and ``OCSP`` URIs.
+
+   .. versionchanged:: 3.6.15-27
+      IPv6 address strings no longer have a trailing new line.
 
 .. method:: SSLSocket.cipher()
 
