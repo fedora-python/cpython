@@ -2062,6 +2062,35 @@ _PyTrash_thread_destroy_chain(void)
     }
 }
 
+PyAPI_FUNC(void)
+_PyObject_AssertFailed(PyObject *obj, const char *msg, const char *expr,
+              const char *file, int line, const char *function)
+{
+    fprintf(stderr,
+            "%s:%d: %s: Assertion \"%s\" failed.\n",
+            file, line, function, expr);
+    if (msg) {
+        fprintf(stderr, "%s\n", msg);
+    }
+
+    fflush(stderr);
+
+    if (obj) {
+        /* This might succeed or fail, but we're about to abort, so at least
+           try to provide any extra info we can: */
+        _PyObject_Dump(obj);
+    }
+    else {
+        fprintf(stderr, "NULL object\n");
+    }
+
+    fflush(stdout);
+    fflush(stderr);
+
+    /* Terminate the process: */
+    abort();
+}
+
 #ifndef Py_TRACE_REFS
 /* For Py_LIMITED_API, we need an out-of-line version of _Py_Dealloc.
    Define this here, so we can undefine the macro. */
