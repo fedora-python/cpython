@@ -153,6 +153,7 @@ class CmdLineTest(unittest.TestCase):
         env = os.environ.copy()
         # Use C locale to get ascii for the locale encoding
         env['LC_ALL'] = 'C'
+        env['PYTHONCOERCECLOCALE'] = '0'
         code = (
             b'import locale; '
             b'print(ascii("' + undecodable + b'"), '
