@@ -2505,6 +2505,7 @@ class RecvmsgGenericStreamTests(RecvmsgGenericTests):
     # Tests which require a stream socket and can use either recvmsg()
     # or recvmsg_into().
 
+    @unittest._skipInRpmBuild('fails intermittently when run within Koji')
     def testRecvmsgEOF(self):
         # Receive end-of-stream indicator (b"", peer socket closed).
         msg, ancdata, flags, addr = self.doRecvmsg(self.serv_sock, 1024)
