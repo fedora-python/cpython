@@ -3,6 +3,7 @@
 import sys
 import functools
 import difflib
+import os
 import logging
 import pprint
 import re
@@ -133,6 +134,22 @@ class _BaseTestCaseContext:
     def _raiseFailure(self, standardMsg):
         msg = self.test_case._formatMessage(self.msg, standardMsg)
         raise self.test_case.failureException(msg)
+
+# Non-standard/downstream-only hooks for handling issues with specific test
+# cases:
+
+def _skipInRpmBuild(reason):
+    """
+    Non-standard/downstream-only decorator for marking a specific unit test
+    to be skipped when run within the %check of an rpmbuild.
+
+    Specifically, this takes effect when WITHIN_PYTHON_RPM_BUILD is set within
+    the environment, and has no effect otherwise.
+    """
+    if 'WITHIN_PYTHON_RPM_BUILD' in os.environ:
+        return skip(reason)
+    else:
+        return _id
 
 class _AssertRaisesBaseContext(_BaseTestCaseContext):
 
