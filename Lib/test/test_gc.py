@@ -1,10 +1,12 @@
 import unittest
 from test.support import (verbose, refcount_test, run_unittest,
                           strip_python_stderr, cpython_only, start_threads,
-                          temp_dir, requires_type_collecting, TESTFN, unlink)
+                          temp_dir, requires_type_collecting, TESTFN, unlink,
+                          import_module)
 from test.support.script_helper import assert_python_ok, make_script
 
 import sys
+import sysconfig
 import time
 import gc
 import weakref
@@ -49,6 +51,8 @@ class GC_Detector(object):
         # Create a piece of cyclic trash that triggers it_happened when
         # gc collects it.
         self.wr = weakref.ref(C1055820(666), it_happened)
+
+BUILD_WITH_NDEBUG = ('-DNDEBUG' in sysconfig.get_config_vars()['PY_CFLAGS'])
 
 @with_tp_del
 class Uncollectable(object):
@@ -875,6 +879,50 @@ class GCCallbackTests(unittest.TestCase):
 
         # Uncollectables should be gone
         self.assertEqual(len(gc.garbage), 0)
+
+
+    @unittest.skipIf(BUILD_WITH_NDEBUG,
+                     'built with -NDEBUG')
+    def test_refcount_errors(self):
+        self.preclean()
+        # Verify the "handling" of objects with broken refcounts
+        import_module("ctypes") #skip if not supported
+
+        import subprocess
+        code = '''if 1:
+        a = []
+        b = [a]
+
+        # Simulate the refcount of "a" being too low (compared to the
+        # references held on it by live data), but keeping it above zero
+        # (to avoid deallocating it):
+        import ctypes
+        ctypes.pythonapi.Py_DecRef(ctypes.py_object(a))
+
+        # The garbage collector should now have a fatal error when it reaches
+        # the broken object:
+        import gc
+        gc.collect()
+        '''
+        p = subprocess.Popen([sys.executable, "-c", code],
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        p.stdout.close()
+        p.stderr.close()
+        # Verify that stderr has a useful error message:
+        self.assertRegex(stderr,
+            b'Modules/gcmodule.c:[0-9]+: visit_decref: Assertion "\(\(gc\)->gc.gc_refs >> \(1\)\) != 0" failed.')
+        self.assertRegex(stderr,
+            b'refcount was too small')
+        self.assertRegex(stderr,
+            b'object  : \[\]')
+        self.assertRegex(stderr,
+            b'type    : list')
+        self.assertRegex(stderr,
+            b'refcount: 1')
+        self.assertRegex(stderr,
+            b'address : 0x[0-9a-f]+')
 
 
 class GCTogglingTests(unittest.TestCase):
