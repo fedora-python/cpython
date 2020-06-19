@@ -1,4 +1,5 @@
 #include <Python.h>
+#include "pyconfig.h"
 #include "pythread.h"
 #include <stdio.h>
 

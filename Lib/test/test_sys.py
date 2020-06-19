@@ -680,6 +680,7 @@ class SysModuleTest(unittest.TestCase):
         # Force the POSIX locale
         env = os.environ.copy()
         env["LC_ALL"] = "C"
+        env["PYTHONCOERCECLOCALE"] = "0"
         code = '\n'.join((
             'import sys',
             'def dump(name):',
