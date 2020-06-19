@@ -239,7 +239,8 @@ update_refs(PyGC_Head *containers)
 {
     PyGC_Head *gc = containers->gc.gc_next;
     for (; gc != containers; gc = gc->gc.gc_next) {
-        assert(_PyGCHead_REFS(gc) == GC_REACHABLE);
+        PyObject_ASSERT(FROM_GC(gc),
+                        _PyGCHead_REFS(gc) == GC_REACHABLE);
         _PyGCHead_SET_REFS(gc, Py_REFCNT(FROM_GC(gc)));
         /* Python's cyclic gc should never see an incoming refcount
          * of 0:  if something decref'ed to 0, it should have been
@@ -259,7 +260,8 @@ update_refs(PyGC_Head *containers)
          * so serious that maybe this should be a release-build
          * check instead of an assert?
          */
-        assert(_PyGCHead_REFS(gc) != 0);
+        PyObject_ASSERT(FROM_GC(gc),
+                        _PyGCHead_REFS(gc) != 0);
     }
 }
 
@@ -274,7 +276,9 @@ visit_decref(PyObject *op, void *data)
          * generation being collected, which can be recognized
          * because only they have positive gc_refs.
          */
-        assert(_PyGCHead_REFS(gc) != 0); /* else refcount was too small */
+        PyObject_ASSERT_WITH_MSG(FROM_GC(gc),
+                        _PyGCHead_REFS(gc) != 0,
+                        "refcount was too small"); /* else refcount was too small */
         if (_PyGCHead_REFS(gc) > 0)
             _PyGCHead_DECREF(gc);
     }
@@ -334,9 +338,10 @@ visit_reachable(PyObject *op, PyGC_Head *reachable)
          * If gc_refs == GC_UNTRACKED, it must be ignored.
          */
          else {
-            assert(gc_refs > 0
-                   || gc_refs == GC_REACHABLE
-                   || gc_refs == GC_UNTRACKED);
+             PyObject_ASSERT(FROM_GC(gc),
+                             gc_refs > 0
+                             || gc_refs == GC_REACHABLE
+                             || gc_refs == GC_UNTRACKED);
          }
     }
     return 0;
@@ -378,7 +383,7 @@ move_unreachable(PyGC_Head *young, PyGC_Head *unreachable)
              */
             PyObject *op = FROM_GC(gc);
             traverseproc traverse = Py_TYPE(op)->tp_traverse;
-            assert(_PyGCHead_REFS(gc) > 0);
+            PyObject_ASSERT(op, _PyGCHead_REFS(gc) > 0);
             _PyGCHead_SET_REFS(gc, GC_REACHABLE);
             (void) traverse(op,
                             (visitproc)visit_reachable,
@@ -441,7 +446,7 @@ move_legacy_finalizers(PyGC_Head *unreachable, PyGC_Head *finalizers)
     for (gc = unreachable->gc.gc_next; gc != unreachable; gc = next) {
         PyObject *op = FROM_GC(gc);
 
-        assert(IS_TENTATIVELY_UNREACHABLE(op));
+        PyObject_ASSERT(op, IS_TENTATIVELY_UNREACHABLE(op));
         next = gc->gc.gc_next;
 
         if (has_legacy_finalizer(op)) {
@@ -517,7 +522,7 @@ handle_weakrefs(PyGC_Head *unreachable, PyGC_Head *old)
         PyWeakReference **wrlist;
 
         op = FROM_GC(gc);
-        assert(IS_TENTATIVELY_UNREACHABLE(op));
+        PyObject_ASSERT(op, IS_TENTATIVELY_UNREACHABLE(op));
         next = gc->gc.gc_next;
 
         if (! PyType_SUPPORTS_WEAKREFS(Py_TYPE(op)))
@@ -538,9 +543,9 @@ handle_weakrefs(PyGC_Head *unreachable, PyGC_Head *old)
              * the callback pointer intact.  Obscure:  it also
              * changes *wrlist.
              */
-            assert(wr->wr_object == op);
+            PyObject_ASSERT(wr->wr_object, wr->wr_object == op);
             _PyWeakref_ClearRef(wr);
-            assert(wr->wr_object == Py_None);
+            PyObject_ASSERT(wr->wr_object, wr->wr_object == Py_None);
             if (wr->wr_callback == NULL)
                 continue;                       /* no callback */
 
@@ -574,7 +579,7 @@ handle_weakrefs(PyGC_Head *unreachable, PyGC_Head *old)
      */
             if (IS_TENTATIVELY_UNREACHABLE(wr))
                 continue;
-            assert(IS_REACHABLE(wr));
+            PyObject_ASSERT(op, IS_REACHABLE(wr));
 
             /* Create a new reference so that wr can't go away
              * before we can process it again.
@@ -583,7 +588,8 @@ handle_weakrefs(PyGC_Head *unreachable, PyGC_Head *old)
 
             /* Move wr to wrcb_to_call, for the next pass. */
             wrasgc = AS_GC(wr);
-            assert(wrasgc != next); /* wrasgc is reachable, but
+            PyObject_ASSERT(op, wrasgc != next);
+                                    /* wrasgc is reachable, but
                                        next isn't, so they can't
                                        be the same */
             gc_list_move(wrasgc, &wrcb_to_call);
@@ -599,11 +605,11 @@ handle_weakrefs(PyGC_Head *unreachable, PyGC_Head *old)
 
         gc = wrcb_to_call.gc.gc_next;
         op = FROM_GC(gc);
-        assert(IS_REACHABLE(op));
-        assert(PyWeakref_Check(op));
+        PyObject_ASSERT(op, IS_REACHABLE(op));
+        PyObject_ASSERT(op, PyWeakref_Check(op));
         wr = (PyWeakReference *)op;
         callback = wr->wr_callback;
-        assert(callback != NULL);
+        PyObject_ASSERT(op, callback != NULL);
 
         /* copy-paste of weakrefobject.c's handle_callback() */
         temp = PyObject_CallFunctionObjArgs(callback, wr, NULL);
@@ -717,12 +723,14 @@ check_garbage(PyGC_Head *collectable)
     for (gc = collectable->gc.gc_next; gc != collectable;
          gc = gc->gc.gc_next) {
         _PyGCHead_SET_REFS(gc, Py_REFCNT(FROM_GC(gc)));
-        assert(_PyGCHead_REFS(gc) != 0);
+        PyObject_ASSERT(FROM_GC(gc),
+                        _PyGCHead_REFS(gc) != 0);
     }
     subtract_refs(collectable);
     for (gc = collectable->gc.gc_next; gc != collectable;
          gc = gc->gc.gc_next) {
-        assert(_PyGCHead_REFS(gc) >= 0);
+        PyObject_ASSERT(FROM_GC(gc),
+                        _PyGCHead_REFS(gc) >= 0);
         if (_PyGCHead_REFS(gc) != 0)
             return -1;
     }
