@@ -1235,6 +1235,7 @@ class PosixTester(unittest.TestCase):
         posix.RTLD_GLOBAL
         posix.RTLD_LOCAL
 
+    @unittest._skipInRpmBuild('running kernel may not match kernel in chroot')
     @unittest.skipUnless(hasattr(os, 'SEEK_HOLE'),
                          "test needs an OS that reports file holes")
     def test_fs_holes(self):
