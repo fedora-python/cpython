@@ -12,6 +12,8 @@ from distutils.sysconfig import get_python_version
 from distutils import log
 
 class bdist_wininst(Command):
+    # Marker for tests that we have the unsupported bdist_wininst
+    _unsupported = True
 
     description = "create an executable installer for MS Windows"
 
