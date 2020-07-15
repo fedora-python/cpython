@@ -948,7 +948,7 @@ if test $enable_shared = "yes"; then
 	  ;;
     OSF*)
 	  LDLIBRARY='libpython$(VERSION).so'
-	  BLDLIBRARY='-rpath $(LIBDIR) -L. -lpython$(VERSION)'
+	  BLDLIBRARY='-L. -lpython$(VERSION)'
 	  RUNSHARED=LD_LIBRARY_PATH=`pwd`${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 	  ;;
     atheos*)
