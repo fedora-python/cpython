@@ -29,6 +29,7 @@ setup(name='foo', version='0.1', py_modules=['foo'],
 
 """
 
+@unittest._skipInRpmBuild("don't try to nest one rpm build inside another rpm build")
 class BuildRpmTestCase(support.TempdirManager,
                        support.EnvironGuard,
                        support.LoggingSilencer,
