@@ -325,6 +325,13 @@ class CommonReadTest(ReadTest):
 class MiscReadTest(CommonReadTest):
     taropen = tarfile.TarFile.taropen
 
+    def test_length_zero_header(self):
+        # bpo-39017 (CVE-2019-20907): reading a zero-length header should fail
+        # with an exception
+        with self.assertRaisesRegexp(tarfile.ReadError, "file could not be opened successfully"):
+            with tarfile.open(support.findfile('recursion.tar')) as tar:
+                pass
+
     def test_no_name_argument(self):
         with open(self.tarname, "rb") as fobj:
             tar = tarfile.open(fileobj=fobj, mode=self.mode)
