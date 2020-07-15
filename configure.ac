@@ -778,7 +778,7 @@ AC_SUBST(LIBRARY)
 AC_MSG_CHECKING(LIBRARY)
 if test -z "$LIBRARY"
 then
-	LIBRARY='libpython$(VERSION).a'
+	LIBRARY='libpython$(VERSION)$(DEBUG_EXT).a'
 fi
 AC_MSG_RESULT($LIBRARY)
 
@@ -924,8 +924,8 @@ if test $enable_shared = "yes"; then
 	  INSTSONAME="$LDLIBRARY".$SOVERSION
           ;;
     Linux*|GNU*|NetBSD*|FreeBSD*|DragonFly*|OpenBSD*)
-	  LDLIBRARY='libpython$(VERSION).so'
-	  BLDLIBRARY='-L. -lpython$(VERSION)'
+	  LDLIBRARY='libpython$(VERSION)$(DEBUG_EXT).so'
+	  BLDLIBRARY='-L. -lpython$(VERSION)$(DEBUG_EXT)'
 	  RUNSHARED=LD_LIBRARY_PATH=`pwd`${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 	  case $ac_sys_system in
 	      FreeBSD*)
@@ -1050,6 +1050,14 @@ then
 else AC_MSG_RESULT(no); Py_DEBUG='false'
 fi],
 [AC_MSG_RESULT(no)])
+
+if test "$Py_DEBUG" = 'true'
+then
+	DEBUG_EXT=_d
+	DEBUG_SUFFIX=-debug
+fi
+AC_SUBST(DEBUG_EXT)
+AC_SUBST(DEBUG_SUFFIX)
 
 # XXX Shouldn't the code above that fiddles with BASECFLAGS and OPT be
 # merged with this chunk of code?

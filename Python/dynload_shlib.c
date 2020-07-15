@@ -46,11 +46,16 @@ const struct filedescr _PyImport_DynLoadFiletab[] = {
     {"module.exe", "rb", C_EXTENSION},
     {"MODULE.EXE", "rb", C_EXTENSION},
 #else
+#ifdef Py_DEBUG
+    {"_d.so", "rb", C_EXTENSION},
+    {"module_d.so", "rb", C_EXTENSION},
+#else
     {".so", "rb", C_EXTENSION},
     {"module.so", "rb", C_EXTENSION},
-#endif
-#endif
-#endif
+#endif /* Py_DEBUG */
+#endif /* __VMS */
+#endif /* defined(PYOS_OS2) && defined(PYCC_GCC) */
+#endif /* __CYGWIN__ */
     {0, 0}
 };
 

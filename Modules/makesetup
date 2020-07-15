@@ -233,7 +233,7 @@ sed -e 's/[ 	]*#.*//' -e '/^[ 	]*$/d' |
 			*$mod.o*)	base=$mod;;
 			*)		base=${mod}module;;
 			esac
-			file="$srcdir/$base\$(SO)"
+			file="$srcdir/$base\$(DEBUG_EXT)\$(SO)"
 			case $doconfig in
 			no)	SHAREDMODS="$SHAREDMODS $file";;
 			esac

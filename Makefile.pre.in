@@ -115,8 +115,8 @@ SCRIPTDIR=	$(prefix)/lib64
 # Detailed destination directories
 BINLIBDEST=	$(LIBDIR)/python$(VERSION)
 LIBDEST=	$(SCRIPTDIR)/python$(VERSION)
-INCLUDEPY=	$(INCLUDEDIR)/python$(VERSION)
-CONFINCLUDEPY=	$(CONFINCLUDEDIR)/python$(VERSION)
+INCLUDEPY=	$(INCLUDEDIR)/python$(VERSION)$(DEBUG_SUFFIX)
+CONFINCLUDEPY=	$(CONFINCLUDEDIR)/python$(VERSION)$(DEBUG_SUFFIX)
 LIBP=		$(LIBDIR)/python$(VERSION)
 
 # Symbols used for using shared libraries
@@ -129,6 +129,12 @@ DESTSHARED=	$(BINLIBDEST)/lib-dynload
 # Executable suffix (.exe on Windows and Mac OS X)
 EXE=		@EXEEXT@
 BUILDEXE=	@BUILDEXEEXT@
+
+# DEBUG_EXT is used by ELF files (names and SONAMEs); it will be "_d" for a debug build
+# DEBUG_SUFFIX is used by filesystem paths; it will be "-debug" for a debug build
+# Both will be empty in an optimized build
+DEBUG_EXT=	@DEBUG_EXT@
+DEBUG_SUFFIX=	@DEBUG_SUFFIX@
 
 # Short name and location for Mac OS X Python framework
 UNIVERSALSDK=@UNIVERSALSDK@
@@ -196,8 +202,8 @@ LIBOBJDIR=	Python/
 LIBOBJS=	@LIBOBJS@
 UNICODE_OBJS=   @UNICODE_OBJS@
 
-PYTHON=		python$(EXE)
-BUILDPYTHON=	python$(BUILDEXE)
+PYTHON=		python$(DEBUG_SUFFIX)$(EXE)
+BUILDPYTHON=	python$(DEBUG_SUFFIX)$(BUILDEXE)
 
 PYTHON_FOR_REGEN=@PYTHON_FOR_REGEN@
 PYTHON_FOR_BUILD=@PYTHON_FOR_BUILD@
@@ -528,7 +534,7 @@ sharedmods: $(BUILDPYTHON) pybuilddir.txt Modules/_math.o
 		_TCLTK_INCLUDES='$(TCLTK_INCLUDES)' _TCLTK_LIBS='$(TCLTK_LIBS)' \
 		$(PYTHON_FOR_BUILD) $(srcdir)/setup.py $$quiet build
 
-libpython$(VERSION).so: $(LIBRARY_OBJS)
+libpython$(VERSION)$(DEBUG_EXT).so: $(LIBRARY_OBJS)
 	if test $(INSTSONAME) != $(LDLIBRARY); then \
 		$(BLDSHARED) -Wl,-h$(INSTSONAME) -o $(INSTSONAME) $(LIBRARY_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM) $(LDLAST); \
 		$(LN) -f $(INSTSONAME) $@; \
@@ -983,18 +989,18 @@ bininstall:	altbininstall
 	then rm -f $(DESTDIR)$(BINDIR)/$(PYTHON); \
 	else true; \
 	fi
-	(cd $(DESTDIR)$(BINDIR); $(LN) -s python2$(EXE) $(PYTHON))
-	-rm -f $(DESTDIR)$(BINDIR)/python2$(EXE)
-	(cd $(DESTDIR)$(BINDIR); $(LN) -s python$(VERSION)$(EXE) python2$(EXE))
-	-rm -f $(DESTDIR)$(BINDIR)/python2-config
-	(cd $(DESTDIR)$(BINDIR); $(LN) -s python$(VERSION)-config python2-config)
-	-rm -f $(DESTDIR)$(BINDIR)/python-config
-	(cd $(DESTDIR)$(BINDIR); $(LN) -s python2-config python-config)
+	(cd $(DESTDIR)$(BINDIR); $(LN) -s python2$(DEBUG_SUFFIX)$(EXE) $(PYTHON))
+	-rm -f $(DESTDIR)$(BINDIR)/python2$(DEBUG_SUFFIX)$(EXE)
+	(cd $(DESTDIR)$(BINDIR); $(LN) -s python$(VERSION)$(DEBUG_SUFFIX)$(EXE) python2$(DEBUG_SUFFIX)$(EXE))
+	-rm -f $(DESTDIR)$(BINDIR)/python2$(DEBUG_SUFFIX)-config
+	(cd $(DESTDIR)$(BINDIR); $(LN) -s python$(VERSION)$(DEBUG_SUFFIX)-config python2$(DEBUG_SUFFIX)-config)
+	-rm -f $(DESTDIR)$(BINDIR)/python$(DEBUG_SUFFIX)-config
+	(cd $(DESTDIR)$(BINDIR); $(LN) -s python2$(DEBUG_SUFFIX)-config python$(DEBUG_SUFFIX)-config)
 	-test -d $(DESTDIR)$(LIBPC) || $(INSTALL) -d -m $(DIRMODE) $(DESTDIR)$(LIBPC)
-	-rm -f $(DESTDIR)$(LIBPC)/python2.pc
-	(cd $(DESTDIR)$(LIBPC); $(LN) -s python-$(VERSION).pc python2.pc)
-	-rm -f $(DESTDIR)$(LIBPC)/python.pc
-	(cd $(DESTDIR)$(LIBPC); $(LN) -s python2.pc python.pc)
+	-rm -f $(DESTDIR)$(LIBPC)/python2$(DEBUG_SUFFIX).pc
+	(cd $(DESTDIR)$(LIBPC); $(LN) -s python-$(VERSION)$(DEBUG_SUFFIX).pc python2$(DEBUG_SUFFIX).pc)
+	-rm -f $(DESTDIR)$(LIBPC)/python$(DEBUG_SUFFIX).pc
+	(cd $(DESTDIR)$(LIBPC); $(LN) -s python2$(DEBUG_SUFFIX).pc python$(DEBUG_SUFFIX).pc)
 
 # Install the interpreter with $(VERSION) affixed
 # This goes into $(exec_prefix)
@@ -1007,7 +1013,7 @@ altbininstall:	$(BUILDPYTHON)
 		else	true; \
 		fi; \
 	done
-	$(INSTALL_PROGRAM) $(BUILDPYTHON) $(DESTDIR)$(BINDIR)/python$(VERSION)$(EXE)
+	$(INSTALL_PROGRAM) $(BUILDPYTHON) $(DESTDIR)$(BINDIR)/python$(VERSION)$(DEBUG_SUFFIX)$(EXE)
 	if test -f $(LDLIBRARY); then \
 		if test -n "$(DLLLIBRARY)" ; then \
 			$(INSTALL_SHARED) $(DLLLIBRARY) $(DESTDIR)$(BINDIR); \
@@ -1178,10 +1184,11 @@ $(srcdir)/Lib/$(PLATDIR):
 	fi; \
 	cd $(srcdir)/Lib/$(PLATDIR); $(RUNSHARED) ./regen
 
-python-config: $(srcdir)/Misc/python-config.in
+python$(DEBUG_SUFFIX)-config: $(srcdir)/Misc/python-config.in
 	# Substitution happens here, as the completely-expanded BINDIR
 	# is not available in configure
-	sed -e "s,@EXENAME@,$(BINDIR)/python$(VERSION)$(EXE)," < $(srcdir)/Misc/python-config.in >python-config
+	sed -e "s,@EXENAME@,$(BINDIR)/python$(VERSION)$(DEBUG_SUFFIX)$(EXE)," < $(srcdir)/Misc/python-config.in >python$(DEBUG_SUFFIX)-config
+	
 
 # Install the include files
 INCLDIRSTOMAKE=$(INCLUDEDIR) $(CONFINCLUDEDIR) $(INCLUDEPY) $(CONFINCLUDEPY)
@@ -1202,13 +1209,13 @@ inclinstall:
 	$(INSTALL_DATA) pyconfig.h $(DESTDIR)$(CONFINCLUDEPY)/pyconfig.h
 
 # Install the library and miscellaneous stuff needed for extending/embedding
-# This goes into $(exec_prefix)
-LIBPL=		$(LIBP)/config
+# This goes into $(exec_prefix)$(DEBUG_SUFFIX)
+LIBPL=		$(LIBP)/config$(DEBUG_SUFFIX)
 
 # pkgconfig directory
 LIBPC=		$(LIBDIR)/pkgconfig
 
-libainstall:	@DEF_MAKE_RULE@ python-config
+libainstall:	@DEF_MAKE_RULE@ python$(DEBUG_SUFFIX)-config
 	@for i in $(LIBDIR) $(LIBP) $(LIBPL) $(LIBPC); \
 	do \
 		if test ! -d $(DESTDIR)$$i; then \
@@ -1224,11 +1231,10 @@ libainstall:	@DEF_MAKE_RULE@ python-config
 	$(INSTALL_DATA) Modules/Setup $(DESTDIR)$(LIBPL)/Setup
 	$(INSTALL_DATA) Modules/Setup.local $(DESTDIR)$(LIBPL)/Setup.local
 	$(INSTALL_DATA) Modules/Setup.config $(DESTDIR)$(LIBPL)/Setup.config
-	$(INSTALL_DATA) Misc/python.pc $(DESTDIR)$(LIBPC)/python-$(VERSION).pc
+	$(INSTALL_DATA) Misc/python.pc $(DESTDIR)$(LIBPC)/python-$(VERSION)$(DEBUG_SUFFIX).pc
 	$(INSTALL_SCRIPT) $(srcdir)/Modules/makesetup $(DESTDIR)$(LIBPL)/makesetup
 	$(INSTALL_SCRIPT) $(srcdir)/install-sh $(DESTDIR)$(LIBPL)/install-sh
-	$(INSTALL_SCRIPT) python-config $(DESTDIR)$(BINDIR)/python$(VERSION)-config
-	rm python-config
+	$(INSTALL_SCRIPT) python$(DEBUG_SUFFIX)-config $(DESTDIR)$(BINDIR)/python$(VERSION)$(DEBUG_SUFFIX)-config
 	@if [ -s Modules/python.exp -a \
 		"`echo $(MACHDEP) | sed 's/^\(...\).*/\1/'`" = "aix" ]; then \
 		echo; echo "Installing support files for building shared extension modules on AIX:"; \

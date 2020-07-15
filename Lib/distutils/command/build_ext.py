@@ -677,7 +677,10 @@ class build_ext (Command):
         so_ext = get_config_var('SO')
         if os.name == 'nt' and self.debug:
             return os.path.join(*ext_path) + '_d' + so_ext
-        return os.path.join(*ext_path) + so_ext
+        
+        # Similarly, extensions in debug mode are named 'module_d.so', to
+        # avoid adding the _d to the SO config variable:
+        return os.path.join(*ext_path) + (sys.pydebug and "_d" or "") + so_ext
 
     def get_export_symbols (self, ext):
         """Return the list of symbols that a shared extension has to
@@ -762,6 +765,8 @@ class build_ext (Command):
                 template = "python%d.%d"
                 pythonlib = (template %
                              (sys.hexversion >> 24, (sys.hexversion >> 16) & 0xff))
+                if sys.pydebug:
+                    pythonlib += '_d'
                 return ext.libraries + [pythonlib]
             else:
                 return ext.libraries
