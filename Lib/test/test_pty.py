@@ -125,6 +125,7 @@ class PtyTest(unittest.TestCase):
         os.close(master_fd)
 
 
+    @unittest._skipInRpmBuild('sometimes fails in Koji, possibly due to a mock issue (rhbz#714627)')
     def test_fork(self):
         debug("calling pty.fork()")
         pid, master_fd = pty.fork()

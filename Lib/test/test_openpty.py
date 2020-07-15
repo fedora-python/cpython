@@ -8,6 +8,7 @@ if not hasattr(os, "openpty"):
 
 
 class OpenptyTest(unittest.TestCase):
+    @unittest._skipInRpmBuild('sometimes fails in Koji, possibly due to a mock issue (rhbz#714627)')
     def test(self):
         master, slave = os.openpty()
         self.addCleanup(os.close, master)
