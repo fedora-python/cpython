@@ -374,6 +374,8 @@ class GNUTranslations(NullTranslations):
                     item = item.strip()
                     if not item:
                         continue
+                    if item.startswith("#"):
+                        continue
                     k = v = None
                     if ':' in item:
                         k, v = item.split(':', 1)
