@@ -1,7 +1,8 @@
 import unittest
 from test.support import (verbose, run_unittest, start_threads,
-                          requires_type_collecting)
+                          requires_type_collecting, import_module)
 import sys
+import sysconfig
 import time
 import gc
 import weakref
@@ -38,6 +39,8 @@ class GC_Detector(object):
         # gc collects it.
         self.wr = weakref.ref(C1055820(666), it_happened)
 
+
+BUILT_WITH_NDEBUG = ('-DNDEBUG' in sysconfig.get_config_vars()['PY_CFLAGS'])
 
 ### Tests
 ###############################################################################
@@ -536,6 +539,49 @@ class GCTests(unittest.TestCase):
             # If the callback resurrected one of these guys, the instance
             # would be damaged, with an empty __dict__.
             self.assertEqual(x, None)
+
+    @unittest.skipIf(BUILT_WITH_NDEBUG,
+                     'built with -NDEBUG')
+    def test_refcount_errors(self):
+        # Verify the "handling" of objects with broken refcounts
+ 
+        import_module("ctypes") #skip if not supported
+
+        import subprocess
+        code = '''if 1:
+        a = []
+        b = [a]
+
+        # Simulate the refcount of "a" being too low (compared to the
+        # references held on it by live data), but keeping it above zero
+        # (to avoid deallocating it):
+        import ctypes
+        ctypes.pythonapi.Py_DecRef(ctypes.py_object(a))
+
+        # The garbage collector should now have a fatal error when it reaches
+        # the broken object:
+        import gc
+        gc.collect()
+        '''
+        p = subprocess.Popen([sys.executable, "-c", code],
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        p.stdout.close()
+        p.stderr.close()
+        # Verify that stderr has a useful error message:
+        self.assertRegexpMatches(stderr,
+            b'Modules/gcmodule.c:[0-9]+: visit_decref: Assertion "gc->gc.gc_refs != 0" failed.')
+        self.assertRegexpMatches(stderr,
+            b'refcount was too small')
+        self.assertRegexpMatches(stderr,
+            b'object  : \[\]')
+        self.assertRegexpMatches(stderr,
+            b'type    : list')
+        self.assertRegexpMatches(stderr,
+            b'refcount: 1')
+        self.assertRegexpMatches(stderr,
+            b'address : 0x[0-9a-f]+')
 
 class GCTogglingTests(unittest.TestCase):
     def setUp(self):
