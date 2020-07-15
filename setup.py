@@ -502,7 +502,7 @@ class PyBuildExt(build_ext):
     def detect_modules(self):
         # Ensure that /usr/local is always used
         if not cross_compiling:
-            add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')
+            add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib64')
             add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')
         if cross_compiling:
             self.add_gcc_paths()
@@ -828,11 +828,11 @@ class PyBuildExt(build_ext):
             elif curses_library:
                 readline_libs.append(curses_library)
             elif self.compiler.find_library_file(lib_dirs +
-                                                     ['/usr/lib/termcap'],
+                                                     ['/usr/lib64/termcap'],
                                                      'termcap'):
                 readline_libs.append('termcap')
             exts.append( Extension('readline', ['readline.c'],
-                                   library_dirs=['/usr/lib/termcap'],
+                                   library_dirs=['/usr/lib64/termcap'],
                                    extra_link_args=readline_extra_link_args,
                                    libraries=readline_libs) )
         else:
@@ -867,8 +867,8 @@ class PyBuildExt(build_ext):
             if krb5_h:
                 ssl_incs += krb5_h
         ssl_libs = find_library_file(self.compiler, 'ssl',lib_dirs,
-                                     ['/usr/local/ssl/lib',
-                                      '/usr/contrib/ssl/lib/'
+                                     ['/usr/local/ssl/lib64',
+                                      '/usr/contrib/ssl/lib64/'
                                      ] )
 
         if (ssl_incs is not None and
