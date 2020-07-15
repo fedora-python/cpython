@@ -9457,6 +9457,43 @@ all_ins(PyObject *d)
 #endif
 #endif
 
+    /* These came from statvfs.h */
+#ifdef ST_RDONLY
+    if (ins(d, "ST_RDONLY", (long)ST_RDONLY)) return -1;
+#endif /* ST_RDONLY */
+#ifdef ST_NOSUID
+    if (ins(d, "ST_NOSUID", (long)ST_NOSUID)) return -1;
+#endif /* ST_NOSUID */
+    
+    /* GNU extensions */
+#ifdef ST_NODEV
+    if (ins(d, "ST_NODEV", (long)ST_NODEV)) return -1;
+#endif /* ST_NODEV */
+#ifdef ST_NOEXEC
+    if (ins(d, "ST_NOEXEC", (long)ST_NOEXEC)) return -1;
+#endif /* ST_NOEXEC */
+#ifdef ST_SYNCHRONOUS
+    if (ins(d, "ST_SYNCHRONOUS", (long)ST_SYNCHRONOUS)) return -1;
+#endif /* ST_SYNCHRONOUS */
+#ifdef ST_MANDLOCK
+    if (ins(d, "ST_MANDLOCK", (long)ST_MANDLOCK)) return -1;
+#endif /* ST_MANDLOCK */
+#ifdef ST_WRITE
+    if (ins(d, "ST_WRITE", (long)ST_WRITE)) return -1;
+#endif /* ST_WRITE */
+#ifdef ST_APPEND
+    if (ins(d, "ST_APPEND", (long)ST_APPEND)) return -1;
+#endif /* ST_APPEND */
+#ifdef ST_NOATIME
+    if (ins(d, "ST_NOATIME", (long)ST_NOATIME)) return -1;
+#endif /* ST_NOATIME */
+#ifdef ST_NODIRATIME
+    if (ins(d, "ST_NODIRATIME", (long)ST_NODIRATIME)) return -1;
+#endif /* ST_NODIRATIME */
+#ifdef ST_RELATIME
+    if (ins(d, "ST_RELATIME", (long)ST_RELATIME)) return -1;
+#endif /* ST_RELATIME */
+    
 #if defined(PYOS_OS2)
     if (insertvalues(d)) return -1;
 #endif
