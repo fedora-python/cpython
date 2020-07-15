@@ -400,7 +400,7 @@ dl dlmodule.c
 #
 # First, look at Setup.config; configure may have set this for you.
 
-gdbm gdbmmodule.c -lgdbm
+# gdbm gdbmmodule.c -lgdbm
 
 
 # Sleepycat Berkeley DB interface.
