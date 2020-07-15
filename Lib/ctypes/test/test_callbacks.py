@@ -69,6 +69,7 @@ class Callbacks(unittest.TestCase):
         self.check_type(c_longlong, 42)
         self.check_type(c_longlong, -42)
 
+    @unittest.skip('Known failure on Sparc: http://bugs.python.org/issue8314')
     def test_ulonglong(self):
         # test some 64-bit values, with and without msb set.
         self.check_type(c_ulonglong, 10955412242170339782)
