@@ -1169,6 +1169,12 @@
 /* Define to profile with the Pentium timestamp counter */
 #undef WITH_TSC
 
+/* Define to keep records of the number of instances of each type */
+#undef COUNT_ALLOCS
+
+/* Define to keep records on function call invocation */
+#undef CALL_PROFILE
+
 /* Define if you want pymalloc to be disabled when running under valgrind */
 #undef WITH_VALGRIND
 

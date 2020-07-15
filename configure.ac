@@ -3032,6 +3032,30 @@ else AC_MSG_RESULT(no)
 fi],
 [AC_MSG_RESULT(no)])
 
+AC_MSG_CHECKING(for --with-count-allocs)
+AC_ARG_WITH(count-allocs,
+[  --with(out)count-allocs  enable/disable per-type instance accounting], [
+if test "$withval" != no
+then 
+  AC_DEFINE(COUNT_ALLOCS, 1,
+    [Define to keep records of the number of instances of each type]) 
+    AC_MSG_RESULT(yes)
+else AC_MSG_RESULT(no)
+fi],
+[AC_MSG_RESULT(no)])
+
+AC_MSG_CHECKING(for --with-call-profile)
+AC_ARG_WITH(call-profile,
+[  --with(out)-call-profile  enable/disable statistics on function call invocation], [
+if test "$withval" != no
+then 
+  AC_DEFINE(CALL_PROFILE, 1, 
+    [Define to keep records on function call invocation]) 
+    AC_MSG_RESULT(yes)
+else AC_MSG_RESULT(no)
+fi],
+[AC_MSG_RESULT(no)])
+
 # Check for Python-specific malloc support
 AC_MSG_CHECKING(for --with-pymalloc)
 AC_ARG_WITH(pymalloc,
