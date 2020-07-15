@@ -43,7 +43,7 @@ static PyMethodDef crypt_methods[] = {
 };
 
 PyMODINIT_FUNC
-initcrypt(void)
+init_crypt(void)
 {
-    Py_InitModule("crypt", crypt_methods);
+    Py_InitModule("_crypt", crypt_methods);
 }
