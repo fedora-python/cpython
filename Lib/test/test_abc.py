@@ -3,6 +3,8 @@
 
 """Unit tests for abc.py."""
 
+import sys
+
 import unittest, weakref
 from test import test_support
 
@@ -223,8 +225,12 @@ class TestABC(unittest.TestCase):
         # Trigger cache.
         C().f()
         del C
-        test_support.gc_collect()
-        self.assertEqual(r(), None)
+        # This doesn't work in our debug build, presumably due to its use
+        # of COUNT_ALLOCS, which makes heap-allocated types immortal (once
+        # they've ever had an instance):
+        if not hasattr(sys, 'getcounts'):
+            test_support.gc_collect()
+            self.assertEqual(r(), None)
 
 def test_main():
     test_support.run_unittest(TestABC)
