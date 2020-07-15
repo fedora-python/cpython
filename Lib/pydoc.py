@@ -20,9 +20,6 @@ Run "pydoc -p <port>" to start an HTTP server on a given port on the
 local machine to generate documentation web pages.  Port number 0 can be
 used to get an arbitrary unused port.
 
-For platforms without a command line, "pydoc -g" starts the HTTP server
-and also pops up a little window for controlling it.
-
 Run "pydoc -w <name>" to write out the HTML documentation for a module
 to a file named "<name>.html".
 
@@ -2404,13 +2401,10 @@ def cli():
     Start an HTTP server on the given port on the local machine.  Port
     number 0 can be used to get an arbitrary unused port.
 
-%s -g
-    Pop up a graphical interface for finding and serving documentation.
-
 %s -w <name> ...
     Write out the HTML documentation for a module to a file in the current
     directory.  If <name> contains a '%s', it is treated as a filename; if
     it names a directory, documentation is written for all the contents.
-""" % (cmd, os.sep, cmd, cmd, cmd, cmd, os.sep)
+""" % (cmd, os.sep, cmd, cmd, cmd, os.sep)
 
 if __name__ == '__main__': cli()
