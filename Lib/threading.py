@@ -306,7 +306,7 @@ class _Condition(_Verbose):
         else:
             return True
 
-    def wait(self, timeout=None):
+    def wait(self, timeout=None, balancing=True):
         """Wait until notified or until a timeout occurs.
 
         If the calling thread has not acquired the lock when this method is
@@ -355,7 +355,10 @@ class _Condition(_Verbose):
                     remaining = endtime - _time()
                     if remaining <= 0:
                         break
-                    delay = min(delay * 2, remaining, .05)
+                    if balancing:
+                        delay = min(delay * 2, remaining, 0.05)
+                    else:
+                        delay = remaining
                     _sleep(delay)
                 if not gotit:
                     if __debug__:
@@ -594,7 +597,7 @@ class _Event(_Verbose):
         with self.__cond:
             self.__flag = False
 
-    def wait(self, timeout=None):
+    def wait(self, timeout=None, balancing=True):
         """Block until the internal flag is true.
 
         If the internal flag is true on entry, return immediately. Otherwise,
@@ -611,7 +614,7 @@ class _Event(_Verbose):
         """
         with self.__cond:
             if not self.__flag:
-                self.__cond.wait(timeout)
+                self.__cond.wait(timeout, balancing)
             return self.__flag
 
 # Helper to generate new thread names
@@ -899,7 +902,7 @@ class Thread(_Verbose):
             if 'dummy_threading' not in _sys.modules:
                 raise
 
-    def join(self, timeout=None):
+    def join(self, timeout=None, balancing=True):
         """Wait until the thread terminates.
 
         This blocks the calling thread until the thread whose join() method is
@@ -948,7 +951,7 @@ class Thread(_Verbose):
                         if __debug__:
                             self._note("%s.join(): timed out", self)
                         break
-                    self.__block.wait(delay)
+                    self.__block.wait(delay, balancing)
                 else:
                     if __debug__:
                         self._note("%s.join(): thread stopped", self)
@@ -1133,7 +1136,7 @@ class _DummyThread(Thread):
     def _set_daemon(self):
         return True
 
-    def join(self, timeout=None):
+    def join(self, timeout=None, balancing=True):
         assert False, "cannot join a dummy thread"
 
 
