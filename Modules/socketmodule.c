@@ -5449,6 +5449,15 @@ init_socket(void)
 #ifdef  TCP_QUICKACK
     PyModule_AddIntConstant(m, "TCP_QUICKACK", TCP_QUICKACK);
 #endif
+#ifdef	TCP_CONGESTION
+    PyModule_AddIntConstant(m, "TCP_CONGESTION", TCP_CONGESTION);
+#endif
+#ifdef	TCP_MD5SIG
+    PyModule_AddIntConstant(m, "TCP_MD5SIG", TCP_MD5SIG);
+#endif
+#ifdef	TCP_MD5SIG_MAXKEYLEN
+    PyModule_AddIntConstant(m, "TCP_MD5SIG_MAXKEYLEN", TCP_MD5SIG_MAXKEYLEN);
+#endif
 
 
     /* IPX options */
