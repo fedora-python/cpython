@@ -6,7 +6,7 @@ import getopt
 from distutils import sysconfig
 
 valid_opts = ['prefix', 'exec-prefix', 'includes', 'libs', 'cflags',
-              'ldflags', 'help']
+              'ldflags', 'extension-suffix', 'help']
 
 def exit_with_usage(code=1):
     print >>sys.stderr, "Usage: %s [%s]" % (sys.argv[0],
@@ -56,3 +56,5 @@ for opt in opt_flags:
                 libs.extend(getvar('LINKFORSHARED').split())
         print ' '.join(libs)
 
+    elif opt == '--extension-suffix':
+        print (sys.pydebug and "_d" or "") + sysconfig.get_config_var('SO')
