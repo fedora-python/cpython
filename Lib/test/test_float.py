@@ -1132,6 +1132,7 @@ class HexFloatTestCase(unittest.TestCase):
                     self.identical(got, expected)
 
 
+    @unittest.skip('Known failure on ARM: http://bugs.python.org/issue8265')
     def test_from_hex(self):
         MIN = self.MIN;
         MAX = self.MAX;
