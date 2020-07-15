@@ -487,6 +487,32 @@ class SysModuleTest(unittest.TestCase):
         p.wait()
         self.assertIn(executable, ["''", repr(sys.executable)])
 
+    def test_debugmallocstats(self):
+        # Test sys._debugmallocstats()
+
+        import subprocess
+
+        # Verify the default of writing to stderr:
+        p = subprocess.Popen([sys.executable,
+                              '-c', 'import sys; sys._debugmallocstats()'],
+                             stderr=subprocess.PIPE)
+        out, err = p.communicate()
+        p.wait()
+        self.assertIn("arenas allocated current", err)
+                                     
+        # Verify that we can redirect the output to a file (not a file-like
+        # object, though):
+        with open('mallocstats.txt', 'w') as out:
+            sys._debugmallocstats(out)
+        result = open('mallocstats.txt').read()
+        self.assertIn("arenas allocated current", result)
+        os.unlink('mallocstats.txt')
+
+        # Verify that the destination must be a file:
+        with self.assertRaises(TypeError):
+            sys._debugmallocstats(42)
+        
+
 @test.test_support.cpython_only
 class SizeofTest(unittest.TestCase):
 

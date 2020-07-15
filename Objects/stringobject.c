@@ -4880,3 +4880,43 @@ void _Py_ReleaseInternedStrings(void)
     PyDict_Clear(interned);
     Py_CLEAR(interned);
 }
+
+void _PyString_DebugMallocStats(FILE *out)
+{
+    ssize_t i;
+    int num_immortal = 0, num_mortal = 0;
+    ssize_t immortal_size = 0, mortal_size = 0;
+
+    if (interned == NULL || !PyDict_Check(interned))
+        return;
+
+    for (i = 0; i <= ((PyDictObject*)interned)->ma_mask; i++) {
+        PyDictEntry *ep = ((PyDictObject*)interned)->ma_table + i;
+        PyObject *pvalue = ep->me_value;
+        if (pvalue != NULL) {
+            PyStringObject *s = (PyStringObject *)ep->me_key;
+
+            switch (s->ob_sstate) {
+            case SSTATE_NOT_INTERNED:
+                /* XXX Shouldn't happen */
+                break;
+            case SSTATE_INTERNED_IMMORTAL:
+                num_immortal ++;
+                immortal_size += s->ob_size;
+                break;
+            case SSTATE_INTERNED_MORTAL:
+                num_mortal ++;
+                mortal_size += s->ob_size;
+                break;
+            default:
+                Py_FatalError("Inconsistent interned string state.");
+            }
+        }
+    }
+
+    fprintf(out, "%d mortal interned strings\n", num_mortal);
+    fprintf(out, "%d immortal interned strings\n", num_immortal);
+    fprintf(out, "total size of all interned strings: "
+            "%zi/%zi "
+            "mortal/immortal\n", mortal_size, immortal_size);
+}

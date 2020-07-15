@@ -132,6 +132,7 @@ PyAPI_FUNC(PyObject *) _PyFloat_FormatAdvanced(PyObject *obj,
    failure.  Used in builtin_round in bltinmodule.c. */
 PyAPI_FUNC(PyObject *) _Py_double_round(double x, int ndigits);
 
+PyAPI_FUNC(void) _PyFloat_DebugMallocStats(FILE* out);
 
 
 #ifdef __cplusplus

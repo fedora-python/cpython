@@ -154,6 +154,8 @@ PyAPI_FUNC(PyObject *) PyDict_GetItemString(PyObject *dp, const char *key);
 PyAPI_FUNC(int) PyDict_SetItemString(PyObject *dp, const char *key, PyObject *item);
 PyAPI_FUNC(int) PyDict_DelItemString(PyObject *dp, const char *key);
 
+PyAPI_FUNC(void) _PyDict_DebugMallocStats(FILE *out);
+
 #ifdef __cplusplus
 }
 #endif

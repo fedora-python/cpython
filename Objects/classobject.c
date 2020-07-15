@@ -2691,3 +2691,12 @@ PyMethod_Fini(void)
 {
     (void)PyMethod_ClearFreeList();
 }
+
+/* Print summary info about the state of the optimized allocator */
+void
+_PyMethod_DebugMallocStats(FILE *out)
+{
+    _PyDebugAllocatorStats(out,
+                           "free PyMethodObject",
+                           numfree, sizeof(PyMethodObject));
+}

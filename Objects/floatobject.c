@@ -34,6 +34,22 @@ typedef struct _floatblock PyFloatBlock;
 static PyFloatBlock *block_list = NULL;
 static PyFloatObject *free_list = NULL;
 
+/* Print summary info about the state of the optimized allocator */
+void
+_PyFloat_DebugMallocStats(FILE *out)
+{
+  int num_blocks = 0;
+  PyFloatBlock *block;
+
+  /* Walk the block list, counting */
+  for (block = block_list; block ; block = block->next) {
+      num_blocks++;
+  }
+
+  _PyDebugAllocatorStats(out,
+                         "PyFloatBlock", num_blocks, sizeof(PyFloatBlock));
+}
+
 static PyFloatObject *
 fill_free_list(void)
 {

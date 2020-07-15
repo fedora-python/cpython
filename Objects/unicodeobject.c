@@ -9018,6 +9018,12 @@ _PyUnicode_Fini(void)
     (void)PyUnicode_ClearFreeList();
 }
 
+void _PyUnicode_DebugMallocStats(FILE *out)
+{
+    _PyDebugAllocatorStats(out, "free PyUnicodeObject", numfree,
+                           sizeof(PyUnicodeObject));
+}
+
 #ifdef __cplusplus
 }
 #endif

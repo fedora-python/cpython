@@ -44,6 +44,23 @@ typedef struct _intblock PyIntBlock;
 static PyIntBlock *block_list = NULL;
 static PyIntObject *free_list = NULL;
 
+
+/* Print summary info about the state of the optimized allocator */
+void
+_PyInt_DebugMallocStats(FILE *out)
+{
+    int num_blocks = 0;
+    PyIntBlock *block;
+
+    /* Walk the block list, counting */
+    for (block = block_list; block ; block = block->next) {
+        num_blocks++;
+    }
+
+    _PyDebugAllocatorStats(out,
+                           "PyIntBlock", num_blocks, sizeof(PyIntBlock));
+}
+
 static PyIntObject *
 fill_free_list(void)
 {

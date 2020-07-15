@@ -225,6 +225,15 @@ show_track(void)
 static PyDictObject *free_list[PyDict_MAXFREELIST];
 static int numfree = 0;
 
+/* Print summary info about the state of the optimized allocator */
+void
+_PyDict_DebugMallocStats(FILE *out)
+{
+    _PyDebugAllocatorStats(out,
+                           "free PyDictObject", numfree, sizeof(PyDictObject));
+}
+
+
 void
 PyDict_Fini(void)
 {

@@ -890,6 +890,57 @@ a 11-tuple where the entries in the tuple are counts of:\n\
 extern "C" {
 #endif
 
+static PyObject *
+sys_debugmallocstats(PyObject *self, PyObject *args)
+{
+    PyObject *file = NULL;
+    FILE *fp;
+
+    if (!PyArg_ParseTuple(args, "|O!",
+                          &PyFile_Type, &file)) {
+      return NULL;
+    }
+    if (!file) {
+        /* Default to sys.stderr: */
+      file = PySys_GetObject("stderr");
+      if (!file) {
+          PyErr_SetString(PyExc_ValueError, "sys.stderr not set");
+          return NULL;
+      }
+      if (!PyFile_Check(file)) {
+          PyErr_SetString(PyExc_TypeError, "sys.stderr is not a file");
+          return NULL;
+      }
+    }
+
+    Py_INCREF(file);
+    /* OK, we now own a ref on non-NULL "file" */
+
+    fp = PyFile_AsFile(file);
+    if (!fp) {
+        PyErr_SetString(PyExc_ValueError, "file is closed");
+        Py_DECREF(file);
+        return NULL;	
+    }
+
+    _PyObject_DebugMallocStats(fp);
+    fputc('\n', fp);
+    _PyObject_DebugTypeStats(fp);
+
+    Py_DECREF(file);
+
+    Py_RETURN_NONE;
+}
+PyDoc_STRVAR(debugmallocstats_doc,
+"_debugmallocstats([file])\n\
+\n\
+Print summary info to the given file (or sys.stderr) about the state of\n\
+pymalloc's structures.\n\
+\n\
+In Py_DEBUG mode, also perform some expensive internal consistency\n\
+checks.\n\
+");
+
 #ifdef Py_TRACE_REFS
 /* Defined in objects.c because it uses static globals if that file */
 extern PyObject *_Py_GetObjects(PyObject *, PyObject *);
@@ -988,6 +1039,8 @@ static PyMethodDef sys_methods[] = {
     {"settrace",        sys_settrace, METH_O, settrace_doc},
     {"gettrace",        sys_gettrace, METH_NOARGS, gettrace_doc},
     {"call_tracing", sys_call_tracing, METH_VARARGS, call_tracing_doc},
+    {"_debugmallocstats", sys_debugmallocstats, METH_VARARGS,
+     debugmallocstats_doc},
     {NULL,              NULL}           /* sentinel */
 };
 

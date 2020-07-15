@@ -1040,6 +1040,13 @@ PyAPI_FUNC(void) _PyTrash_thread_destroy_chain(void);
             _PyTrash_thread_deposit_object((PyObject*)op); \
     } while (0);
 
+PyAPI_FUNC(void)
+_PyDebugAllocatorStats(FILE *out, const char *block_name, int num_blocks,
+		       size_t sizeof_block);
+
+PyAPI_FUNC(void)
+_PyObject_DebugTypeStats(FILE *out);
+
 #ifdef __cplusplus
 }
 #endif
