@@ -920,21 +920,6 @@ class PyBuildExt(build_ext):
                 print ("warning: openssl 0x%08x is too old for _hashlib" %
                        openssl_ver)
                 missing.append('_hashlib')
-        if COMPILED_WITH_PYDEBUG or not have_usable_openssl:
-            # The _sha module implements the SHA1 hash algorithm.
-            exts.append( Extension('_sha', ['shamodule.c']) )
-            # The _md5 module implements the RSA Data Security, Inc. MD5
-            # Message-Digest Algorithm, described in RFC 1321.  The
-            # necessary files md5.c and md5.h are included here.
-            exts.append( Extension('_md5',
-                            sources = ['md5module.c', 'md5.c'],
-                            depends = ['md5.h']) )
-
-        min_sha2_openssl_ver = 0x00908000
-        if COMPILED_WITH_PYDEBUG or openssl_ver < min_sha2_openssl_ver:
-            # OpenSSL doesn't do these until 0.9.8 so we'll bring our own hash
-            exts.append( Extension('_sha256', ['sha256module.c']) )
-            exts.append( Extension('_sha512', ['sha512module.c']) )
 
         # Modules that provide persistent dictionary-like semantics.  You will
         # probably want to arrange for at least one of them to be available on

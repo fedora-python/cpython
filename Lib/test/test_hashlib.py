@@ -34,6 +34,19 @@ def hexstr(s):
         r = r + h[(i >> 4) & 0xF] + h[i & 0xF]
     return r
 
+def openssl_enforces_fips():
+    # Use the "openssl" command (if present) to try to determine if the local
+    # OpenSSL is configured to enforce FIPS
+    from subprocess import Popen, PIPE
+    try:
+        p = Popen(['openssl', 'md5'],
+                  stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    except OSError:
+        # "openssl" command not found
+        return False
+    stdout, stderr = p.communicate(input=b'abc')
+    return b'unknown cipher' in stderr
+OPENSSL_ENFORCES_FIPS = openssl_enforces_fips()
 
 class HashLibTestCase(unittest.TestCase):
     supported_hash_names = ( 'md5', 'MD5', 'sha1', 'SHA1',
@@ -63,10 +76,10 @@ class HashLibTestCase(unittest.TestCase):
         # of hashlib.new given the algorithm name.
         for algorithm, constructors in self.constructors_to_test.items():
             constructors.add(getattr(hashlib, algorithm))
-            def _test_algorithm_via_hashlib_new(data=None, _alg=algorithm):
+            def _test_algorithm_via_hashlib_new(data=None, _alg=algorithm, usedforsecurity=True):
                 if data is None:
-                    return hashlib.new(_alg)
-                return hashlib.new(_alg, data)
+                    return hashlib.new(_alg, usedforsecurity=usedforsecurity)
+                return hashlib.new(_alg, data, usedforsecurity=usedforsecurity)
             constructors.add(_test_algorithm_via_hashlib_new)
 
         _hashlib = self._conditional_import_module('_hashlib')
@@ -80,28 +93,13 @@ class HashLibTestCase(unittest.TestCase):
                 if constructor:
                     constructors.add(constructor)
 
-        _md5 = self._conditional_import_module('_md5')
-        if _md5:
-            self.constructors_to_test['md5'].add(_md5.new)
-        _sha = self._conditional_import_module('_sha')
-        if _sha:
-            self.constructors_to_test['sha1'].add(_sha.new)
-        _sha256 = self._conditional_import_module('_sha256')
-        if _sha256:
-            self.constructors_to_test['sha224'].add(_sha256.sha224)
-            self.constructors_to_test['sha256'].add(_sha256.sha256)
-        _sha512 = self._conditional_import_module('_sha512')
-        if _sha512:
-            self.constructors_to_test['sha384'].add(_sha512.sha384)
-            self.constructors_to_test['sha512'].add(_sha512.sha512)
-
         super(HashLibTestCase, self).__init__(*args, **kwargs)
 
     def test_hash_array(self):
         a = array.array("b", range(10))
         constructors = self.constructors_to_test.itervalues()
         for cons in itertools.chain.from_iterable(constructors):
-            c = cons(a)
+            c = cons(a, usedforsecurity=False)
             c.hexdigest()
 
     def test_algorithms_attribute(self):
@@ -122,28 +120,9 @@ class HashLibTestCase(unittest.TestCase):
         self.assertRaises(ValueError, hashlib.new, 'spam spam spam spam spam')
         self.assertRaises(TypeError, hashlib.new, 1)
 
-    def test_get_builtin_constructor(self):
-        get_builtin_constructor = hashlib.__dict__[
-                '__get_builtin_constructor']
-        self.assertRaises(ValueError, get_builtin_constructor, 'test')
-        try:
-            import _md5
-        except ImportError:
-            pass
-        # This forces an ImportError for "import _md5" statements
-        sys.modules['_md5'] = None
-        try:
-            self.assertRaises(ValueError, get_builtin_constructor, 'md5')
-        finally:
-            if '_md5' in locals():
-                sys.modules['_md5'] = _md5
-            else:
-                del sys.modules['_md5']
-        self.assertRaises(TypeError, get_builtin_constructor, 3)
-
     def test_hexdigest(self):
         for name in self.supported_hash_names:
-            h = hashlib.new(name)
+            h = hashlib.new(name, usedforsecurity=False)
             self.assertTrue(hexstr(h.digest()) == h.hexdigest())
 
     def test_large_update(self):
@@ -153,16 +132,16 @@ class HashLibTestCase(unittest.TestCase):
         abcs = aas + bees + cees
 
         for name in self.supported_hash_names:
-            m1 = hashlib.new(name)
+            m1 = hashlib.new(name, usedforsecurity=False)
             m1.update(aas)
             m1.update(bees)
             m1.update(cees)
 
-            m2 = hashlib.new(name)
+            m2 = hashlib.new(name, usedforsecurity=False)
             m2.update(abcs)
             self.assertEqual(m1.digest(), m2.digest(), name+' update problem.')
 
-            m3 = hashlib.new(name, abcs)
+            m3 = hashlib.new(name, abcs, usedforsecurity=False)
             self.assertEqual(m1.digest(), m3.digest(), name+' new problem.')
 
     def check(self, name, data, digest):
@@ -170,7 +149,7 @@ class HashLibTestCase(unittest.TestCase):
         # 2 is for hashlib.name(...) and hashlib.new(name, ...)
         self.assertGreaterEqual(len(constructors), 2)
         for hash_object_constructor in constructors:
-            computed = hash_object_constructor(data).hexdigest()
+            computed = hash_object_constructor(data, usedforsecurity=False).hexdigest()
             self.assertEqual(
                     computed, digest,
                     "Hash algorithm %s constructed using %s returned hexdigest"
@@ -195,7 +174,8 @@ class HashLibTestCase(unittest.TestCase):
 
     def check_unicode(self, algorithm_name):
         # Unicode objects are not allowed as input.
-        expected = hashlib.new(algorithm_name, str(u'spam')).hexdigest()
+        expected = hashlib.new(algorithm_name, str(u'spam'),
+                               usedforsecurity=False).hexdigest()
         self.check(algorithm_name, u'spam', expected)
 
     def test_unicode(self):
@@ -392,6 +372,70 @@ class HashLibTestCase(unittest.TestCase):
             thread.join()
 
         self.assertEqual(expected_hash, hasher.hexdigest())
+
+
+    def test_issue9146(self):
+        # Ensure that various ways to use "MD5" from "hashlib" don't segfault:
+        m = hashlib.md5(usedforsecurity=False)
+        m.update(b'abc\n')
+        self.assertEquals(m.hexdigest(), "0bee89b07a248e27c83fc3d5951213c1")
+        
+        m = hashlib.new('md5', usedforsecurity=False)
+        m.update(b'abc\n')
+        self.assertEquals(m.hexdigest(), "0bee89b07a248e27c83fc3d5951213c1")
+        
+        m = hashlib.md5(b'abc\n', usedforsecurity=False)
+        self.assertEquals(m.hexdigest(), "0bee89b07a248e27c83fc3d5951213c1")
+        
+        m = hashlib.new('md5', b'abc\n', usedforsecurity=False)
+        self.assertEquals(m.hexdigest(), "0bee89b07a248e27c83fc3d5951213c1")
+
+    def assertRaisesUnknownCipher(self, callable_obj=None, *args, **kwargs):
+        try:
+            callable_obj(*args, **kwargs)
+        except ValueError, e:
+            if not e.args[0].endswith('unknown cipher'):
+                self.fail('Incorrect exception raised')
+        else:
+            self.fail('Exception was not raised')
+
+    @unittest.skipUnless(OPENSSL_ENFORCES_FIPS,
+                         'FIPS enforcement required for this test.')
+    def test_hashlib_fips_mode(self):        
+        # Ensure that we raise a ValueError on vanilla attempts to use MD5
+        # in hashlib in a FIPS-enforced setting:
+        self.assertRaisesUnknownCipher(hashlib.md5)
+        self.assertRaisesUnknownCipher(hashlib.new, 'md5')
+
+    @unittest.skipUnless(OPENSSL_ENFORCES_FIPS,
+                         'FIPS enforcement required for this test.')
+    def test_hashopenssl_fips_mode(self):
+        # Verify the _hashlib module's handling of md5:
+        import _hashlib
+
+        assert hasattr(_hashlib, 'openssl_md5')
+
+        # Ensure that _hashlib raises a ValueError on vanilla attempts to
+        # use MD5 in a FIPS-enforced setting:
+        self.assertRaisesUnknownCipher(_hashlib.openssl_md5)
+        self.assertRaisesUnknownCipher(_hashlib.new, 'md5')
+
+        # Ensure that in such a setting we can whitelist a callsite with
+        # usedforsecurity=False and have it succeed:
+        m = _hashlib.openssl_md5(usedforsecurity=False)
+        m.update('abc\n')
+        self.assertEquals(m.hexdigest(), "0bee89b07a248e27c83fc3d5951213c1")
+        
+        m = _hashlib.new('md5', usedforsecurity=False)
+        m.update('abc\n')
+        self.assertEquals(m.hexdigest(), "0bee89b07a248e27c83fc3d5951213c1")
+        
+        m = _hashlib.openssl_md5('abc\n', usedforsecurity=False)
+        self.assertEquals(m.hexdigest(), "0bee89b07a248e27c83fc3d5951213c1")
+        
+        m = _hashlib.new('md5', 'abc\n', usedforsecurity=False)
+        self.assertEquals(m.hexdigest(), "0bee89b07a248e27c83fc3d5951213c1")
+        
 
 
 class KDFTests(unittest.TestCase):
