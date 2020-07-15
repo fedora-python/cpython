@@ -1,6 +1,7 @@
 """Test case implementation"""
 
 import collections
+import os
 import sys
 import functools
 import difflib
@@ -94,6 +95,43 @@ def expectedFailure(func):
         raise _UnexpectedSuccess
     return wrapper
 
+
+# Non-standard/downstream-only hooks for handling issues with specific test
+# cases:
+
+def _skipInRpmBuild(reason):
+    """
+    Non-standard/downstream-only decorator for marking a specific unit test
+    to be skipped when run within the %check of an rpmbuild.
+
+    Specifically, this takes effect when WITHIN_PYTHON_RPM_BUILD is set within
+    the environment, and has no effect otherwise.
+    """
+    if 'WITHIN_PYTHON_RPM_BUILD' in os.environ:
+        return skip(reason)
+    else:
+        return _id
+
+def _expectedFailureInRpmBuild(func):
+    """
+    Non-standard/downstream-only decorator for marking a specific unit test
+    as expected to fail within the %check of an rpmbuild.
+
+    Specifically, this takes effect when WITHIN_PYTHON_RPM_BUILD is set within
+    the environment, and has no effect otherwise.
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if 'WITHIN_PYTHON_RPM_BUILD' in os.environ:
+            try:
+                func(*args, **kwargs)
+            except Exception:
+                raise _ExpectedFailure(sys.exc_info())
+            raise _UnexpectedSuccess
+        else:
+            # Call directly:
+            func(*args, **kwargs)
+    return wrapper
 
 class _AssertRaisesContext(object):
     """A context manager used to implement TestCase.assertRaises* methods."""
