@@ -182,6 +182,7 @@ class DebuggingServerTests(unittest.TestCase):
         smtp = smtplib.SMTP(HOST, self.port, local_hostname='localhost', timeout=15)
         smtp.quit()
 
+    @unittest._skipInRpmBuild("Does not work in network-free environment")
     def testNOOP(self):
         smtp = smtplib.SMTP(HOST, self.port, local_hostname='localhost', timeout=15)
         expected = (250, 'Ok')
