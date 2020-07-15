@@ -520,6 +520,10 @@ def main():
 
     abs__file__()
     known_paths = removeduppaths()
+    from sysconfig import is_python_build
+    if is_python_build():
+        from _sysconfigdata import build_time_vars
+        sys.path.append(os.path.join(build_time_vars['abs_builddir'], 'Modules'))
     if ENABLE_USER_SITE is None:
         ENABLE_USER_SITE = check_enableusersite()
     known_paths = addusersitepackages(known_paths)
