@@ -753,6 +753,8 @@ class ProxyHandler(BaseHandler):
         if proxy_type is None:
             proxy_type = orig_type
 
+        req.get_host()
+
         if req.host and proxy_bypass(req.host):
             return None
 
