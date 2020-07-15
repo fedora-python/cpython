@@ -37,24 +37,42 @@ typedef unsigned long long uint64;
 */
 #if defined(__ppc__) || defined (__powerpc__)
 
-#define READ_TIMESTAMP(var) ppc_getcounter(&var)
+#if defined( __powerpc64__) || defined(__LP64__)
+/* 64-bit PowerPC */
+#define READ_TIMESTAMP(var) ppc64_getcounter(&var)
+static void
+ppc64_getcounter(uint64 *v)
+{
+    /* On 64-bit PowerPC we can read the 64-bit timebase directly into a
+       64-bit register */
+    uint64 timebase;
+#ifdef _ARCH_PWR4
+    asm volatile ("mfspr %0,268" : "=r" (timebase));
+#else
+    asm volatile ("mftb %0" : "=r" (timebase));
+#endif
+    *v = timebase;
+}
+
+#else
+/* 32-bit PowerPC */
+#define READ_TIMESTAMP(var) ppc32_getcounter(&var)
 
 static void
-ppc_getcounter(uint64 *v)
+ppc32_getcounter(uint64 *v)
 {
-    register unsigned long tbu, tb, tbu2;
+    union { long long ll; long ii[2]; } u;
+    long tmp;
 
   loop:
-    asm volatile ("mftbu %0" : "=r" (tbu) );
-    asm volatile ("mftb  %0" : "=r" (tb)  );
-    asm volatile ("mftbu %0" : "=r" (tbu2));
-    if (__builtin_expect(tbu != tbu2, 0)) goto loop;
+    asm volatile ("mftbu %0" : "=r" (u.ii[0]) );
+    asm volatile ("mftb  %0" : "=r" (u.ii[1]) );
+    asm volatile ("mftbu %0" : "=r" (tmp));
+    if (__builtin_expect(u.ii[0] != tmp, 0)) goto loop;
 
-    /* The slightly peculiar way of writing the next lines is
-       compiled better by GCC than any other way I tried. */
-    ((long*)(v))[0] = tbu;
-    ((long*)(v))[1] = tb;
+    *v = u.ll;
 }
+#endif /* powerpc 32/64 bit */
 
 #elif defined(__i386__)
 
