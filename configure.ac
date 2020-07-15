@@ -3052,6 +3052,38 @@ if test "$with_valgrind" != no; then
     )
 fi
 
+# Check for dtrace support
+AC_MSG_CHECKING(for --with-dtrace)
+AC_ARG_WITH(dtrace,
+            AC_HELP_STRING(--with(out)-dtrace, disable/enable dtrace support))
+
+if test ! -z "$with_dtrace"
+then
+    if dtrace -G -o /dev/null -s $srcdir/Include/pydtrace.d 2>/dev/null
+    then
+	AC_DEFINE(WITH_DTRACE, 1, 
+	 [Define if you want to compile in Dtrace support])
+	with_dtrace="Sun"
+	DTRACEOBJS="Python/dtrace.o"
+	DTRADEHDRS=""
+    elif dtrace -h -o /dev/null -s $srcdir/Include/pydtrace.d
+    then
+	AC_DEFINE(WITH_DTRACE, 1, 
+	 [Define if you want to compile in Dtrace support])
+	with_dtrace="Apple"
+	DTRACEOBJS=""
+	DTRADEHDRS="pydtrace.h"
+    else
+	with_dtrace="no"
+    fi
+else
+    with_dtrace="no"
+fi
+
+AC_MSG_RESULT($with_dtrace)
+AC_SUBST(DTRACEOBJS)
+AC_SUBST(DTRACEHDRS)
+
 # Check for --with-wctype-functions
 AC_MSG_CHECKING(for --with-wctype-functions)
 AC_ARG_WITH(wctype-functions, 

@@ -337,6 +337,7 @@ PYTHON_OBJS=	\
 		Python/formatter_unicode.o \
 		Python/formatter_string.o \
 		Python/$(DYNLOADFILE) \
+		@DTRACEOBJS@ \
 		$(LIBOBJS) \
 		$(MACHDEP_OBJS) \
 		$(THREADOBJ)
@@ -747,6 +748,18 @@ Python/formatter_unicode.o: $(srcdir)/Python/formatter_unicode.c \
 
 Python/formatter_string.o: $(srcdir)/Python/formatter_string.c \
 				$(STRINGLIB_HEADERS)
+
+# Only needed with --with-dtrace
+buildinclude:
+	mkdir -p Include
+
+Include/pydtrace.h: buildinclude $(srcdir)/Include/pydtrace.d
+	dtrace -o $@ $(DFLAGS) -C -h -s $(srcdir)/Include/pydtrace.d
+
+Python/ceval.o: Include/pydtrace.h
+
+Python/dtrace.o: buildinclude $(srcdir)/Include/pydtrace.d Python/ceval.o
+	dtrace -o $@ $(DFLAGS) -C -G -s $(srcdir)/Include/pydtrace.d Python/ceval.o
 
 ############################################################################
 # Header files
@@ -1492,7 +1505,7 @@ Python/thread.o: @THREADHEADERS@
 .PHONY: frameworkinstall frameworkinstallframework frameworkinstallstructure
 .PHONY: frameworkinstallmaclib frameworkinstallapps frameworkinstallunixtools
 .PHONY: frameworkaltinstallunixtools recheck clean clobber distclean
-.PHONY: smelly funny patchcheck altmaninstall commoninstall
+.PHONY: smelly funny patchcheck altmaninstall commoninstall buildinclude
 .PHONY: gdbhooks
 
 # IF YOU PUT ANYTHING HERE IT WILL GO AWAY

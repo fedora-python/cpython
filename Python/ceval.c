@@ -19,6 +19,10 @@
 
 #include <ctype.h>
 
+#ifdef WITH_DTRACE
+#include "pydtrace.h"
+#endif
+
 #ifndef WITH_TSC
 
 #define READ_TIMESTAMP(var)
@@ -674,6 +678,55 @@ PyEval_EvalCode(PyCodeObject *co, PyObject *globals, PyObject *locals)
                       NULL);
 }
 
+#ifdef WITH_DTRACE
+static void
+dtrace_entry(PyFrameObject *f)
+{
+    const char *filename;
+    const char *fname;
+    int lineno;
+
+    filename = PyString_AsString(f->f_code->co_filename);
+    fname = PyString_AsString(f->f_code->co_name);
+    lineno = PyCode_Addr2Line(f->f_code, f->f_lasti);
+
+    PYTHON_FUNCTION_ENTRY((char *)filename, (char *)fname, lineno);
+
+    /*
+     * Currently a USDT tail-call will not receive the correct arguments.
+     * Disable the tail call here.
+     */
+#if defined(__sparc)
+    asm("nop");
+#endif
+}
+
+static void
+dtrace_return(PyFrameObject *f)
+{
+    const char *filename;
+    const char *fname;
+    int lineno;
+
+    filename = PyString_AsString(f->f_code->co_filename);
+    fname = PyString_AsString(f->f_code->co_name);
+    lineno = PyCode_Addr2Line(f->f_code, f->f_lasti);
+    PYTHON_FUNCTION_RETURN((char *)filename, (char *)fname, lineno);
+
+    /*
+     * Currently a USDT tail-call will not receive the correct arguments.
+     * Disable the tail call here.
+     */
+#if defined(__sparc)
+    asm("nop");
+#endif
+}
+#else
+#define	PYTHON_FUNCTION_ENTRY_ENABLED() 0
+#define	PYTHON_FUNCTION_RETURN_ENABLED() 0
+#define	dtrace_entry(f)
+#define	dtrace_return(f)
+#endif
 
 /* Interpreter main loop */
 
@@ -1020,6 +1073,9 @@ PyEval_EvalFrameEx(PyFrameObject *f, int throwflag)
             }
         }
     }
+
+    if (PYTHON_FUNCTION_ENTRY_ENABLED())
+        dtrace_entry(f);
 
     co = f->f_code;
     names = co->co_names;
@@ -3357,6 +3413,9 @@ fast_yield:
 
     /* pop frame */
 exit_eval_frame:
+    if (PYTHON_FUNCTION_RETURN_ENABLED())
+        dtrace_return(f);
+
     Py_LeaveRecursiveCall();
     tstate->frame = f->f_back;
 
