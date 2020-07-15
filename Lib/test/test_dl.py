@@ -12,6 +12,9 @@ sharedlibs = [
     ('/usr/lib/libc.dylib', 'getpid'),
     ]
 
+# (also, "dl" is deprecated in favor of ctypes)
+@unittest._skipInRpmBuild('fails on 64-bit builds: '
+    'module dl requires sizeof(int) == sizeof(long) == sizeof(char*)')
 def test_main():
     for s, func in sharedlibs:
         try:
