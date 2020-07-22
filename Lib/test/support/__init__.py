@@ -659,7 +659,8 @@ def bind_port(sock, host=HOST):
             if sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR) == 1:
                 raise TestFailed("tests should never set the SO_REUSEADDR "   \
                                  "socket option on TCP/IP sockets!")
-        if hasattr(socket, 'SO_REUSEPORT'):
+        if hasattr(socket, 'SO_REUSEPORT') \
+                and 'WITHIN_PYTHON_RPM_BUILD' not in os.environ: # rhbz#913732
             try:
                 if sock.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT) == 1:
                     raise TestFailed("tests should never set the SO_REUSEPORT "   \
