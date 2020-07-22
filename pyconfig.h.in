@@ -12,6 +12,12 @@
    support for AIX C++ shared extension modules. */
 #undef AIX_GENUINE_CPLUSPLUS
 
+/* Define to keep records on function call invocation */
+#undef CALL_PROFILE
+
+/* Define to keep records of the number of instances of each type */
+#undef COUNT_ALLOCS
+
 /* Define if C doubles are 64-bit IEEE 754 binary format, stored in ARM
    mixed-endian order (byte order 45670123) */
 #undef DOUBLE_IS_ARM_MIXED_ENDIAN_IEEE754
