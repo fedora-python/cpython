@@ -118,8 +118,8 @@
 #endif
 
 #ifndef PYTHONPATH
-#define PYTHONPATH PREFIX "/lib/python" VERSION ":" \
-              EXEC_PREFIX "/lib/python" VERSION "/lib-dynload"
+#define PYTHONPATH PREFIX "/lib64/python" VERSION ":" \
+              EXEC_PREFIX "/lib64/python" VERSION "/lib-dynload"
 #endif
 
 #ifndef LANDMARK
@@ -494,7 +494,7 @@ calculate_path(void)
     _pythonpath = _Py_char2wchar(PYTHONPATH, NULL);
     _prefix = _Py_char2wchar(PREFIX, NULL);
     _exec_prefix = _Py_char2wchar(EXEC_PREFIX, NULL);
-    lib_python = _Py_char2wchar("lib/python" VERSION, NULL);
+    lib_python = _Py_char2wchar("lib64/python" VERSION, NULL);
 
     if (!_pythonpath || !_prefix || !_exec_prefix || !lib_python) {
         Py_FatalError(
@@ -683,7 +683,7 @@ calculate_path(void)
     }
     else
         wcsncpy(zip_path, _prefix, MAXPATHLEN);
-    joinpath(zip_path, L"lib/python00.zip");
+    joinpath(zip_path, L"lib64/python00.zip");
     bufsz = wcslen(zip_path);   /* Replace "00" with version */
     zip_path[bufsz - 6] = VERSION[0];
     zip_path[bufsz - 5] = VERSION[2];
@@ -695,7 +695,7 @@ calculate_path(void)
             fprintf(stderr,
                 "Could not find platform dependent libraries <exec_prefix>\n");
         wcsncpy(exec_prefix, _exec_prefix, MAXPATHLEN);
-        joinpath(exec_prefix, L"lib/lib-dynload");
+        joinpath(exec_prefix, L"lib64/lib-dynload");
     }
     /* If we found EXEC_PREFIX do *not* reduce it!  (Yet.) */
 
