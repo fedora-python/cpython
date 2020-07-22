@@ -38,10 +38,22 @@
 #define _OPENSSL_SUPPORTS_SHA2
 #endif
 
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined(LIBRESSL_VERSION_NUMBER)
+/* OpenSSL < 1.1.0 */
+#define EVP_MD_CTX_new EVP_MD_CTX_create
+#define EVP_MD_CTX_free EVP_MD_CTX_destroy
+#define HAS_FAST_PKCS5_PBKDF2_HMAC 0
+#include <openssl/hmac.h>
+#else
+/* OpenSSL >= 1.1.0 */
+#define HAS_FAST_PKCS5_PBKDF2_HMAC 1
+#endif
+
+
 typedef struct {
     PyObject_HEAD
     PyObject            *name;  /* name of this hash algorithm */
-    EVP_MD_CTX           ctx;   /* OpenSSL message digest context */
+    EVP_MD_CTX          *ctx;   /* OpenSSL message digest context */
 #ifdef WITH_THREAD
     PyThread_type_lock   lock;  /* OpenSSL context lock */
 #endif
@@ -54,10 +66,10 @@ static PyTypeObject EVPtype;
    We have one of these per algorithm */
 typedef struct {
     PyObject *name_obj;
-    EVP_MD_CTX ctxs[2];
+    EVP_MD_CTX* ctxs[2];
     /* ctx_ptrs will point to ctxs unless an error occurred, when it will
        be NULL: */
-    EVP_MD_CTX *ctx_ptrs[2];
+    int initialized[2];
     PyObject *error_msgs[2];
 } EVPCachedInfo;
 
@@ -74,18 +86,57 @@ DEFINE_CONSTS_FOR_NEW(sha512)
 #endif
 
 
+/* LCOV_EXCL_START */
+static PyObject *
+_setException(PyObject *exc)
+{
+    unsigned long errcode;
+    const char *lib, *func, *reason;
+
+    errcode = ERR_peek_last_error();
+    if (!errcode) {
+        PyErr_SetString(exc, "unknown reasons");
+        return NULL;
+    }
+    ERR_clear_error();
+
+    lib = ERR_lib_error_string(errcode);
+    func = ERR_func_error_string(errcode);
+    reason = ERR_reason_error_string(errcode);
+
+    if (lib && func) {
+        PyErr_Format(exc, "[%s: %s] %s", lib, func, reason);
+    }
+    else if (lib) {
+        PyErr_Format(exc, "[%s] %s", lib, reason);
+    }
+    else {
+        PyErr_SetString(exc, reason);
+    }
+    return NULL;
+}
+/* LCOV_EXCL_STOP */
+
 static EVPobject *
 newEVPobject(PyObject *name)
 {
     EVPobject *retval = (EVPobject *)PyObject_New(EVPobject, &EVPtype);
+    if (retval == NULL) {
+        return NULL;
+    }
 
     /* save the name for .name to return */
-    if (retval != NULL) {
-        Py_INCREF(name);
-        retval->name = name;
+    Py_INCREF(name);
+    retval->name = name;
 #ifdef WITH_THREAD
-        retval->lock = NULL;
+    retval->lock = NULL;
 #endif
+
+    retval->ctx = EVP_MD_CTX_new();
+    if (retval->ctx == NULL) {
+        Py_DECREF(retval);
+        PyErr_NoMemory();
+        return NULL;
     }
 
     return retval;
@@ -101,7 +152,7 @@ EVP_hash(EVPobject *self, const void *vp, Py_ssize_t len)
             process = MUNCH_SIZE;
         else
             process = Py_SAFE_DOWNCAST(len, Py_ssize_t, unsigned int);
-        EVP_DigestUpdate(&self->ctx, (const void*)cp, process);
+        EVP_DigestUpdate(self->ctx, (const void*)cp, process);
         len -= process;
         cp += process;
     }
@@ -158,16 +209,19 @@ EVP_dealloc(EVPobject *self)
     if (self->lock != NULL)
         PyThread_free_lock(self->lock);
 #endif
-    EVP_MD_CTX_cleanup(&self->ctx);
+    EVP_MD_CTX_free(self->ctx);
     Py_XDECREF(self->name);
     PyObject_Del(self);
 }
 
-static void locked_EVP_MD_CTX_copy(EVP_MD_CTX *new_ctx_p, EVPobject *self)
+static int
+locked_EVP_MD_CTX_copy(EVP_MD_CTX *new_ctx_p, EVPobject *self)
 {
+    int result;
     ENTER_HASHLIB(self);
-    EVP_MD_CTX_copy(new_ctx_p, &self->ctx);
+    result = EVP_MD_CTX_copy(new_ctx_p, self->ctx);
     LEAVE_HASHLIB(self);
+    return result;
 }
 
 /* External methods for a hash object */
@@ -183,7 +237,9 @@ EVP_copy(EVPobject *self, PyObject *unused)
     if ( (newobj = newEVPobject(self->name))==NULL)
         return NULL;
 
-    locked_EVP_MD_CTX_copy(&newobj->ctx, self);
+    if (!locked_EVP_MD_CTX_copy(newobj->ctx, self)) {
+        return _setException(PyExc_ValueError);
+    }
     return (PyObject *)newobj;
 }
 
@@ -194,16 +250,24 @@ static PyObject *
 EVP_digest(EVPobject *self, PyObject *unused)
 {
     unsigned char digest[EVP_MAX_MD_SIZE];
-    EVP_MD_CTX temp_ctx;
+    EVP_MD_CTX *temp_ctx;
     PyObject *retval;
     unsigned int digest_size;
 
-    locked_EVP_MD_CTX_copy(&temp_ctx, self);
-    digest_size = EVP_MD_CTX_size(&temp_ctx);
-    EVP_DigestFinal(&temp_ctx, digest, NULL);
+    temp_ctx = EVP_MD_CTX_new();
+    if (temp_ctx == NULL) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    if (!locked_EVP_MD_CTX_copy(temp_ctx, self)) {
+        return _setException(PyExc_ValueError);
+    }
+    digest_size = EVP_MD_CTX_size(temp_ctx);
+    EVP_DigestFinal(temp_ctx, digest, NULL);
 
     retval = PyBytes_FromStringAndSize((const char *)digest, digest_size);
-    EVP_MD_CTX_cleanup(&temp_ctx);
+    EVP_MD_CTX_free(temp_ctx);
     return retval;
 }
 
@@ -214,17 +278,25 @@ static PyObject *
 EVP_hexdigest(EVPobject *self, PyObject *unused)
 {
     unsigned char digest[EVP_MAX_MD_SIZE];
-    EVP_MD_CTX temp_ctx;
+    EVP_MD_CTX *temp_ctx;
     PyObject *retval;
     char *hex_digest;
     unsigned int i, j, digest_size;
 
-    /* Get the raw (binary) digest value */
-    locked_EVP_MD_CTX_copy(&temp_ctx, self);
-    digest_size = EVP_MD_CTX_size(&temp_ctx);
-    EVP_DigestFinal(&temp_ctx, digest, NULL);
+    temp_ctx = EVP_MD_CTX_new();
+    if (temp_ctx == NULL) {
+        PyErr_NoMemory();
+        return NULL;
+    }
 
-    EVP_MD_CTX_cleanup(&temp_ctx);
+    /* Get the raw (binary) digest value */
+    if (!locked_EVP_MD_CTX_copy(temp_ctx, self)) {
+        return _setException(PyExc_ValueError);
+    }
+    digest_size = EVP_MD_CTX_size(temp_ctx);
+    EVP_DigestFinal(temp_ctx, digest, NULL);
+
+    EVP_MD_CTX_free(temp_ctx);
 
     /* Allocate a new buffer */
     hex_digest = PyMem_Malloc(digest_size * 2 + 1);
@@ -293,7 +365,7 @@ static PyObject *
 EVP_get_block_size(EVPobject *self, void *closure)
 {
     long block_size;
-    block_size = EVP_MD_CTX_block_size(&self->ctx);
+    block_size = EVP_MD_CTX_block_size(self->ctx);
     return PyLong_FromLong(block_size);
 }
 
@@ -301,7 +373,7 @@ static PyObject *
 EVP_get_digest_size(EVPobject *self, void *closure)
 {
     long size;
-    size = EVP_MD_CTX_size(&self->ctx);
+    size = EVP_MD_CTX_size(self->ctx);
     return PyLong_FromLong(size);
 }
 
@@ -363,8 +435,8 @@ EVP_tp_init(EVPobject *self, PyObject *args, PyObject *kwds)
             PyBuffer_Release(&view);
         return -1;
     }
-    mc_ctx_init(&self->ctx, usedforsecurity);
-    if (!EVP_DigestInit_ex(&self->ctx, digest, NULL)) {
+    mc_ctx_init(self->ctx, usedforsecurity);
+    if (!EVP_DigestInit_ex(self->ctx, digest, NULL)) {
         set_evp_exception();
         PyBuffer_Release(&view);
         return -1;
@@ -466,10 +538,10 @@ EVPnew(PyObject *name_obj,
         return NULL;
 
     if (initial_ctx) {
-        EVP_MD_CTX_copy(&self->ctx, initial_ctx);
+        EVP_MD_CTX_copy(self->ctx, initial_ctx);
     } else {
-        mc_ctx_init(&self->ctx, usedforsecurity);
-        if (!EVP_DigestInit_ex(&self->ctx, digest, NULL)) {
+        mc_ctx_init(self->ctx, usedforsecurity);
+        if (!EVP_DigestInit_ex(self->ctx, digest, NULL)) {
             set_evp_exception();
             Py_DECREF(self);
             return NULL;
@@ -548,6 +620,7 @@ EVP_new(PyObject *self, PyObject *args, PyObject *kwdict)
 
 #define PY_PBKDF2_HMAC 1
 
+#if !HAS_FAST_PKCS5_PBKDF2_HMAC
 /* Improved implementation of PKCS5_PBKDF2_HMAC()
  *
  * PKCS5_PBKDF2_HMAC_fast() hashes the password exactly one time instead of
@@ -629,37 +702,8 @@ PKCS5_PBKDF2_HMAC_fast(const char *pass, int passlen,
     HMAC_CTX_cleanup(&hctx_tpl);
     return 1;
 }
+#endif
 
-/* LCOV_EXCL_START */
-static PyObject *
-_setException(PyObject *exc)
-{
-    unsigned long errcode;
-    const char *lib, *func, *reason;
-
-    errcode = ERR_peek_last_error();
-    if (!errcode) {
-        PyErr_SetString(exc, "unknown reasons");
-        return NULL;
-    }
-    ERR_clear_error();
-
-    lib = ERR_lib_error_string(errcode);
-    func = ERR_func_error_string(errcode);
-    reason = ERR_reason_error_string(errcode);
-
-    if (lib && func) {
-        PyErr_Format(exc, "[%s: %s] %s", lib, func, reason);
-    }
-    else if (lib) {
-        PyErr_Format(exc, "[%s] %s", lib, reason);
-    }
-    else {
-        PyErr_SetString(exc, reason);
-    }
-    return NULL;
-}
-/* LCOV_EXCL_STOP */
 
 PyDoc_STRVAR(pbkdf2_hmac__doc__,
 "pbkdf2_hmac(hash_name, password, salt, iterations, dklen=None) -> key\n\
@@ -741,10 +785,17 @@ pbkdf2_hmac(PyObject *self, PyObject *args, PyObject *kwdict)
     key = PyBytes_AS_STRING(key_obj);
 
     Py_BEGIN_ALLOW_THREADS
+#if HAS_FAST_PKCS5_PBKDF2_HMAC
+    retval = PKCS5_PBKDF2_HMAC((char*)password.buf, (int)password.len,
+                               (unsigned char *)salt.buf, (int)salt.len,
+                               iterations, digest, dklen,
+                               (unsigned char *)key);
+#else
     retval = PKCS5_PBKDF2_HMAC_fast((char*)password.buf, (int)password.len,
                                     (unsigned char *)salt.buf, (int)salt.len,
                                     iterations, digest, dklen,
                                     (unsigned char *)key);
+#endif
     Py_END_ALLOW_THREADS
 
     if (!retval) {
@@ -860,11 +911,11 @@ implement_specific_EVP_new(PyObject *self, PyObject *args, PyObject *kwdict,
      * If an error occurred during creation of the global content, the ctx_ptr
      * will be NULL, and the error_msg will hopefully be non-NULL:
      */
-    if (cached_info->ctx_ptrs[idx]) {
+    if (cached_info->initialized[idx]) {
         /* We successfully initialized this context; copy it: */
         ret_obj = EVPnew(cached_info->name_obj,
                          NULL,
-                         cached_info->ctx_ptrs[idx],
+                         cached_info->ctxs[idx],
                          (unsigned char*)view.buf, view.len,
                          usedforsecurity);
     } else {
@@ -897,14 +948,11 @@ implement_specific_EVP_new(PyObject *self, PyObject *args, PyObject *kwdict,
 
   Try to initialize a context for each hash twice, once with
   EVP_MD_CTX_FLAG_NON_FIPS_ALLOW and once without.
-  
-  Any that have errors during initialization will end up with a NULL ctx_ptrs
-  entry, and err_msgs will be set (unless we're very low on memory)
+
+  Any that have errors during initialization will end up with initialized[i]
+  set to 0 and err_msgs being set.
 */
-#define INIT_CONSTRUCTOR_CONSTANTS(NAME)  do {    \
-    init_constructor_constant(&cached_info_ ## NAME, #NAME); \
-} while (0);
-static void
+static int
 init_constructor_constant(EVPCachedInfo *cached_info, const char *name)
 {
     assert(cached_info);
@@ -912,18 +960,25 @@ init_constructor_constant(EVPCachedInfo *cached_info, const char *name)
     if (EVP_get_digestbyname(name)) {
         int i;
         for (i=0; i<2; i++) {
-            mc_ctx_init(&cached_info->ctxs[i], i);
-            if (EVP_DigestInit_ex(&cached_info->ctxs[i],
-                                  EVP_get_digestbyname(name), NULL)) {
+            cached_info->ctxs[i] = EVP_MD_CTX_new();
+            if (cached_info->ctxs[i] == NULL) {
+                PyErr_NoMemory();
+                return -1;
+            }
+
+            mc_ctx_init(cached_info->ctxs[i], i);
+            if (EVP_DigestInit(cached_info->ctxs[i],
+                        EVP_get_digestbyname(name))) {
                 /* Success: */
-                cached_info->ctx_ptrs[i] = &cached_info->ctxs[i];
+                cached_info->initialized[i] = 1;
             } else {
                 /* Failure: */
-              cached_info->ctx_ptrs[i] = NULL;
-              cached_info->error_msgs[i] = error_msg_for_last_error();
+                cached_info->error_msgs[i] = error_msg_for_last_error();
+                cached_info->initialized[i] = 0;
             }
         }
     }
+    return 0;
 }
 
 
@@ -1001,6 +1056,13 @@ PyInit__hashlib(void)
 
     Py_INCREF((PyObject *)&EVPtype);
     PyModule_AddObject(m, "HASH", (PyObject *)&EVPtype);
+
+#define INIT_CONSTRUCTOR_CONSTANTS(NAME)  \
+    do { \
+        if (init_constructor_constant(&cached_info_ ## NAME, #NAME) < 0) { \
+            return NULL; \
+        } \
+    } while (0);
 
     /* these constants are used by the convenience constructors */
     INIT_CONSTRUCTOR_CONSTANTS(md5);
