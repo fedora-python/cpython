@@ -291,6 +291,9 @@ class PyObjectPtr(object):
                 self.tp_name = tp_name
                 self.address = address
 
+            def __len__(self):
+                return len(repr(self))
+
             def __repr__(self):
                 # For the NULL pointer, we have no way of knowing a type, so
                 # special-case it as per
@@ -898,6 +901,8 @@ class PyFrameObjectPtr(PyObjectPtr):
         filename = self.filename()
         try:
             f = open(os_fsencode(filename), 'r')
+        except TypeError: # filename is FakeRepr
+            return None
         except IOError:
             return None
         with f:
@@ -1540,9 +1545,12 @@ class Frame(object):
 
     def print_summary(self):
         if self.is_evalframeex():
-            pyop = self.get_pyop()
-            if pyop:
+            try:
+                pyop = self.get_pyop()
                 line = pyop.get_truncated_repr(MAX_OUTPUT_LEN)
+            except:
+                pyop = None
+            if pyop:
                 write_unicode(sys.stdout, '#%i %s\n' % (self.get_index(), line))
                 if not pyop.is_optimized_out():
                     line = pyop.current_line()
@@ -1559,7 +1567,10 @@ class Frame(object):
 
     def print_traceback(self):
         if self.is_evalframeex():
-            pyop = self.get_pyop()
+            try:
+                pyop = self.get_pyop()
+            except:
+                pyop = None
             if pyop:
                 pyop.print_traceback()
                 if not pyop.is_optimized_out():
