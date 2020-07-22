@@ -957,12 +957,17 @@ class SizeofTest(unittest.TestCase):
         # type
         # static type: PyTypeObject
         s = vsize('P2n15Pl4Pn9Pn11PIP')
+        # COUNT_ALLOCS adds a further 3 Py_ssize_t and 2 pointers:
+        if hasattr(sys, 'getcounts'):
+            s += struct.calcsize('3P2P')
         check(int, s)
         # (PyTypeObject + PyNumberMethods + PyMappingMethods +
         #  PySequenceMethods + PyBufferProcs + 4P)
         s = vsize('P2n15Pl4Pn9Pn11PIP') + struct.calcsize('34P 3P 10P 2P 4P')
         # Separate block for PyDictKeysObject with 4 entries
         s += struct.calcsize("2nPn") + 4*struct.calcsize("n2P")
+        if hasattr(sys, 'getcounts'):
+            s += struct.calcsize('3P2P')
         # class
         class newstyleclass(object): pass
         check(newstyleclass, s)
