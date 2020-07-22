@@ -749,8 +749,7 @@ Traceback \(most recent call first\):
     foo\(1, 2, 3\)
 ''')
 
-    @unittest.skipUnless(_thread,
-                         "Python was compiled without thread support")
+    @unittest.skip('Known failure on ARM: https://bugzilla.redhat.com/show_bug.cgi?id=986713')
     def test_threads(self):
         'Verify that "py-bt" indicates threads that are waiting for the GIL'
         cmd = '''
