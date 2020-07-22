@@ -106,6 +106,7 @@ dbm_length(dbmobject *dp)
             if(okey.dsize) free(okey.dptr);
             okey=key;
         }
+        if(okey.dsize) free(okey.dptr);
         dp->di_size = size;
     }
     return dp->di_size;
