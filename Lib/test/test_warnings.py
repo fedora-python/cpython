@@ -871,6 +871,8 @@ class BootstrapTest(unittest.TestCase):
             assert_python_ok('-c', 'pass', '-W', 'always', PYTHONPATH=cwd)
 
 class FinalizationTest(unittest.TestCase):
+    @unittest.skipIf(hasattr(sys, 'getcounts'),
+                     'types are immortal if COUNT_ALLOCS is used')
     def test_finalization(self):
         # Issue #19421: warnings.warn() should not crash
         # during Python finalization

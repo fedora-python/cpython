@@ -85,6 +85,8 @@ class ModuleTests(unittest.TestCase):
         gc_collect()
         self.assertEqual(f().__dict__["bar"], 4)
 
+    @unittest.skipIf(hasattr(sys, 'getcounts'), 
+                     'types are immortal if COUNT_ALLOCS is used')
     def test_clear_dict_in_ref_cycle(self):
         destroyed = []
         m = ModuleType("foo")
@@ -100,6 +102,8 @@ a = A(destroyed)"""
         gc_collect()
         self.assertEqual(destroyed, [1])
 
+    @unittest.skipIf(hasattr(sys, 'getcounts'), 
+                     'types are immortal if COUNT_ALLOCS is used')
     def test_weakref(self):
         m = ModuleType("foo")
         wr = weakref.ref(m)
@@ -198,6 +202,8 @@ a = A(destroyed)"""
         self.assertEqual(r[-len(ends_with):], ends_with,
                          '{!r} does not end with {!r}'.format(r, ends_with))
 
+    @unittest.skipIf(hasattr(sys, 'getcounts'),
+                     'skipping since COUNT_ALLOCS was used, see issue19527')
     def test_module_finalization_at_shutdown(self):
         # Module globals and builtins should still be available during shutdown
         rc, out, err = assert_python_ok("-c", "from test import final_a")

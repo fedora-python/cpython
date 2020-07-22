@@ -3371,6 +3371,8 @@ class ModuleLevelMiscTest(BaseTest):
         logging.setLoggerClass(logging.Logger)
         self.assertEqual(logging.getLoggerClass(), logging.Logger)
 
+    @unittest.skipIf(hasattr(sys, 'getcounts'),
+                     'types are immortal if COUNT_ALLOCS is used')
     def test_logging_at_shutdown(self):
         # Issue #20037
         code = """if 1:

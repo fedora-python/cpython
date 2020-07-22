@@ -135,10 +135,16 @@ class GCTests(unittest.TestCase):
         del a
         self.assertNotEqual(gc.collect(), 0)
         del B, C
-        self.assertNotEqual(gc.collect(), 0)
+        if hasattr(sys, 'getcounts'):
+            self.assertEqual(gc.collect(), 0)
+        else:
+            self.assertNotEqual(gc.collect(), 0)
         A.a = A()
         del A
-        self.assertNotEqual(gc.collect(), 0)
+        if hasattr(sys, 'getcounts'):
+            self.assertEqual(gc.collect(), 0)
+        else:
+            self.assertNotEqual(gc.collect(), 0)
         self.assertEqual(gc.collect(), 0)
 
     def test_method(self):
@@ -657,6 +663,8 @@ class GCTests(unittest.TestCase):
         stderr = run_command(code % "gc.DEBUG_SAVEALL")
         self.assertNotIn(b"uncollectable objects at shutdown", stderr)
 
+    @unittest.skipIf(hasattr(sys, 'getcounts'),
+                     'types are immortal if COUNT_ALLOCS is used')
     def test_gc_main_module_at_shutdown(self):
         # Create a reference cycle through the __main__ module and check
         # it gets collected at interpreter shutdown.
@@ -671,6 +679,8 @@ class GCTests(unittest.TestCase):
         rc, out, err = assert_python_ok('-c', code)
         self.assertEqual(out.strip(), b'__del__ called')
 
+    @unittest.skipIf(hasattr(sys, 'getcounts'),
+                     'types are immortal if COUNT_ALLOCS is used')
     def test_gc_ordinary_module_at_shutdown(self):
         # Same as above, but with a non-__main__ module.
         with temp_dir() as script_dir:
