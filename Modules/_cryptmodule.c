@@ -69,7 +69,8 @@ crypt_crypt_impl(PyModuleDef *module, const char *word, const char *salt)
 {
     /* On some platforms (AtheOS) crypt returns NULL for an invalid
        salt. Return None in that case. XXX Maybe raise an exception?  */
-    return Py_BuildValue("s", crypt(word, salt));
+    char *result = crypt(word, salt);
+    return Py_BuildValue("s", result);
 }
 
 
