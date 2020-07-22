@@ -24,6 +24,7 @@ ssl = support.import_module("ssl")
 PROTOCOLS = sorted(ssl._PROTOCOL_NAMES)
 HOST = support.HOST
 IS_LIBRESSL = ssl.OPENSSL_VERSION.startswith('LibreSSL')
+IS_OPENSSL_1_1_1 = not IS_LIBRESSL and ssl.OPENSSL_VERSION_INFO >= (1, 1, 1)
 
 
 def data_file(*name):
@@ -697,6 +698,7 @@ class ContextTests(unittest.TestCase):
             ctx.set_ciphers("^$:,;?*'dorothyx")
 
     @skip_if_broken_ubuntu_ssl
+    @unittest.skipIf(IS_OPENSSL_1_1_1, "bpo-36576: fail on OpenSSL 1.1.1")
     def test_options(self):
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
         # OP_ALL | OP_NO_SSLv2 | OP_NO_SSLv3 is the default value
@@ -2655,6 +2657,7 @@ else:
             self.assertIn("no shared cipher", str(server.conn_errors[0]))
 
         @unittest.skipUnless(ssl.HAS_ECDH, "test requires ECDH-enabled OpenSSL")
+        @unittest.skipIf(IS_OPENSSL_1_1_1, "bpo-36576: fail on OpenSSL 1.1.1")
         def test_default_ecdh_curve(self):
             # Issue #21015: elliptic curve-based Diffie Hellman key exchange
             # should be enabled by default on SSL contexts.
