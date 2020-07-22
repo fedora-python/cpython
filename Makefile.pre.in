@@ -398,6 +398,7 @@ PYTHON_OBJS=	\
 		Python/formatter_unicode.o \
 		Python/fileutils.o \
 		Python/$(DYNLOADFILE) \
+		@SYSTEMTAPOBJS@ \
 		$(LIBOBJS) \
 		$(MACHDEP_OBJS) \
 		$(THREADOBJ)
@@ -828,13 +829,21 @@ Objects/setobject.o: $(srcdir)/Objects/stringlib/eq.h
 $(OPCODETARGETS_H): $(OPCODETARGETGEN_FILES)
 	$(OPCODETARGETGEN) $(OPCODETARGETS_H)
 
-Python/ceval.o: $(OPCODETARGETS_H) $(srcdir)/Python/ceval_gil.h
+Python/ceval.o: $(OPCODETARGETS_H) $(srcdir)/Python/ceval_gil.h \
+			$(srcdir)/Python/ceval_systemtap.h @SYSTEMTAPDEPS@
 
 Python/frozen.o: Python/importlib.h
 
 Objects/typeobject.o: Objects/typeslots.inc
 Objects/typeslots.inc: $(srcdir)/Include/typeslots.h $(srcdir)/Objects/typeslots.py
 	$(PYTHON) $(srcdir)/Objects/typeslots.py < $(srcdir)/Include/typeslots.h > Objects/typeslots.inc
+
+# Only needed with --with-systemtap; not a public header:
+$(srcdir)/Python/pysystemtap.h: $(srcdir)/Python/pysystemtap.d
+	dtrace -o $@ $(DFLAGS) -C -h -s $(srcdir)/Python/pysystemtap.d
+
+Python/pysystemtap.o: $(srcdir)/Python/pysystemtap.d Python/ceval.o
+	dtrace -o $@ $(DFLAGS) -C -G -s $(srcdir)/Python/pysystemtap.d Python/ceval.o
 
 ############################################################################
 # Header files
@@ -1535,6 +1544,7 @@ clean: pycremoval
 	-rm -f pybuilddir.txt
 	-rm -f Lib/lib2to3/*Grammar*.pickle
 	-rm -f Modules/_testembed Modules/_freeze_importlib
+	-rm -f $(srcdir)/Python/pysystemtap.h
 
 profile-removal:
 	find . -name '*.gc??' -exec rm -f {} ';'
