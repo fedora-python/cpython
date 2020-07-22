@@ -1953,7 +1953,8 @@ class PyBuildExt(build_ext):
                     if not line:
                         ffi_inc = None
                         break
-                    if line.startswith('#define LIBFFI_H'):
+                    if line.startswith('#define LIBFFI_H') or \
+                       line.startswith('#define ffi_wrapper_h'):
                         break
         ffi_lib = None
         if ffi_inc is not None:
