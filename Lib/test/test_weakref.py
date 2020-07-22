@@ -610,9 +610,10 @@ class ReferencesTestCase(TestBase):
         # been cleared without their callbacks executing.  OTOH, the weakref
         # to C is bound to a function local (wr), and wasn't trash, so that
         # callback should have been invoked when C went away.
-        self.assertEqual(alist, ["C went away"])
-        # The remaining weakref should be dead now (its callback ran).
-        self.assertEqual(wr(), None)
+        if not hasattr(sys, 'getcounts'):
+            self.assertEqual(alist, ["C went away"])
+            # The remaining weakref should be dead now (its callback ran).
+            self.assertEqual(wr(), None)
 
         del alist[:]
         gc.collect()
