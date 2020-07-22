@@ -151,6 +151,7 @@ class TestRaise(unittest.TestCase):
 
 class TestCause(unittest.TestCase):
 
+    @unittest.skip('rhbz#846849')
     def testCauseSyntax(self):
         try:
             try:

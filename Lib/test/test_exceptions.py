@@ -446,6 +446,7 @@ class ExceptionTests(unittest.TestCase):
         self.assertIsNone(e.__context__)
         self.assertIsNone(e.__cause__)
 
+    @unittest.skip('rhbz#846849')
     def testChainingDescriptors(self):
         try:
             raise Exception()

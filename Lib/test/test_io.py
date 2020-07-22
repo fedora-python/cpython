@@ -3492,12 +3492,15 @@ class SignalsTest(unittest.TestCase):
                 if e.errno != errno.EBADF:
                     raise
 
+    @unittest.skip('rhbz#846849')
     def test_interrupted_write_unbuffered(self):
         self.check_interrupted_write(b"xy", b"xy", mode="wb", buffering=0)
 
+    @unittest.skip('rhbz#846849')
     def test_interrupted_write_buffered(self):
         self.check_interrupted_write(b"xy", b"xy", mode="wb")
 
+    @unittest.skip('rhbz#846849')
     # Issue #22331: The test hangs on FreeBSD 7.2
     @support.requires_freebsd_version(8)
     def test_interrupted_write_text(self):

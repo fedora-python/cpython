@@ -339,6 +339,7 @@ class BaseExceptionReportingTests:
         self.check_zero_div(blocks[0])
         self.assertIn('inner_raise() # Marker', blocks[2])
 
+    @unittest.skip('rhbz#846849')
     def test_context_suppression(self):
         try:
             try:
