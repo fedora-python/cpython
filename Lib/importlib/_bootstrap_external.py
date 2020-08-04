@@ -1629,7 +1629,7 @@ def _get_supported_file_loaders():
 
     Each item is a tuple (loader, suffixes).
     """
-    extensions = ExtensionFileLoader, _imp.extension_suffixes()
+    extensions = ExtensionFileLoader, _alternative_architectures(_imp.extension_suffixes())
     source = SourceFileLoader, SOURCE_SUFFIXES
     bytecode = SourcelessFileLoader, BYTECODE_SUFFIXES
     return [extensions, source, bytecode]
@@ -1693,7 +1693,7 @@ def _setup(_bootstrap_module):
 
     # Constants
     setattr(self_module, '_relax_case', _make_relax_case())
-    EXTENSION_SUFFIXES.extend(_imp.extension_suffixes())
+    EXTENSION_SUFFIXES.extend(_alternative_architectures(_imp.extension_suffixes()))
     if builtin_os == 'nt':
         SOURCE_SUFFIXES.append('.pyw')
         if '_d.pyd' in EXTENSION_SUFFIXES:
@@ -1706,3 +1706,39 @@ def _install(_bootstrap_module):
     supported_loaders = _get_supported_file_loaders()
     sys.path_hooks.extend([FileFinder.path_hook(*supported_loaders)])
     sys.meta_path.append(PathFinder)
+
+
+_ARCH_MAP = {
+    "-arm-linux-gnueabi.": "-arm-linux-gnueabihf.",
+    "-armeb-linux-gnueabi.": "-armeb-linux-gnueabihf.",
+    "-mips64-linux-gnu.": "-mips64-linux-gnuabi64.",
+    "-mips64el-linux-gnu.": "-mips64el-linux-gnuabi64.",
+    "-ppc-linux-gnu.": "-powerpc-linux-gnu.",
+    "-ppc-linux-gnuspe.": "-powerpc-linux-gnuspe.",
+    "-ppc64-linux-gnu.": "-powerpc64-linux-gnu.",
+    "-ppc64le-linux-gnu.": "-powerpc64le-linux-gnu.",
+    # The above, but the other way around:
+    "-arm-linux-gnueabihf.": "-arm-linux-gnueabi.",
+    "-armeb-linux-gnueabihf.": "-armeb-linux-gnueabi.",
+    "-mips64-linux-gnuabi64.": "-mips64-linux-gnu.",
+    "-mips64el-linux-gnuabi64.": "-mips64el-linux-gnu.",
+    "-powerpc-linux-gnu.": "-ppc-linux-gnu.",
+    "-powerpc-linux-gnuspe.": "-ppc-linux-gnuspe.",
+    "-powerpc64-linux-gnu.": "-ppc64-linux-gnu.",
+    "-powerpc64le-linux-gnu.": "-ppc64le-linux-gnu.",
+}
+
+
+def _alternative_architectures(suffixes):
+    """Add a suffix with an alternative architecture name
+    to the list of suffixes so an extension built with
+    the default (upstream) setting is loadable with our Pythons
+    """
+
+    for suffix in suffixes:
+        for original, alternative in _ARCH_MAP.items():
+            if original in suffix:
+                suffixes.append(suffix.replace(original, alternative))
+                return suffixes
+
+    return suffixes
