@@ -1646,6 +1646,15 @@ _ARCH_MAP = {
     "-ppc-linux-gnuspe.": "-powerpc-linux-gnuspe.",
     "-ppc64-linux-gnu.": "-powerpc64-linux-gnu.",
     "-ppc64le-linux-gnu.": "-powerpc64le-linux-gnu.",
+    # The above, but the other way around:
+    "-arm-linux-gnueabihf.": "-arm-linux-gnueabi.",
+    "-armeb-linux-gnueabihf.": "-armeb-linux-gnueabi.",
+    "-mips64-linux-gnuabi64.": "-mips64-linux-gnu.",
+    "-mips64el-linux-gnuabi64.": "-mips64el-linux-gnu.",
+    "-powerpc-linux-gnu.": "-ppc-linux-gnu.",
+    "-powerpc-linux-gnuspe.": "-ppc-linux-gnuspe.",
+    "-powerpc64-linux-gnu.": "-ppc64-linux-gnu.",
+    "-powerpc64le-linux-gnu.": "-ppc64le-linux-gnu.",
 }
 
 
