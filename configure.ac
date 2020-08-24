@@ -759,9 +759,9 @@ cat >> conftest.c <<EOF
         alpha-linux-gnu
 # elif defined(__ARM_EABI__) && defined(__ARM_PCS_VFP)
 #  if defined(__ARMEL__)
-        arm-linux-gnueabi
+        arm-linux-gnueabihf
 #  else
-        armeb-linux-gnueabi
+        armeb-linux-gnueabihf
 #  endif
 # elif defined(__ARM_EABI__) && !defined(__ARM_PCS_VFP)
 #  if defined(__ARMEL__)
@@ -801,7 +801,7 @@ cat >> conftest.c <<EOF
 #  elif _MIPS_SIM == _ABIN32
         mips64el-linux-gnuabin32
 #  elif _MIPS_SIM == _ABI64
-        mips64el-linux-gnu
+        mips64el-linux-gnuabi64
 #  else
 #   error unknown platform triplet
 #  endif
@@ -811,22 +811,22 @@ cat >> conftest.c <<EOF
 #  elif _MIPS_SIM == _ABIN32
         mips64-linux-gnuabin32
 #  elif _MIPS_SIM == _ABI64
-        mips64-linux-gnu
+        mips64-linux-gnuabi64
 #  else
 #   error unknown platform triplet
 #  endif
 # elif defined(__or1k__)
         or1k-linux-gnu
 # elif defined(__powerpc__) && defined(__SPE__)
-        ppc-linux-gnuspe
+        powerpc-linux-gnuspe
 # elif defined(__powerpc64__)
 #  if defined(__LITTLE_ENDIAN__)
-        ppc64le-linux-gnu
+        powerpc64le-linux-gnu
 #  else
-        ppc64-linux-gnu
+        powerpc64-linux-gnu
 #  endif
 # elif defined(__powerpc__)
-        ppc-linux-gnu
+        powerpc-linux-gnu
 # elif defined(__s390x__)
         s390x-linux-gnu
 # elif defined(__s390__)
