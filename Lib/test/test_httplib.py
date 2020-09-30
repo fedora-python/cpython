@@ -274,6 +274,28 @@ class HeaderTests(TestCase):
                     conn.putheader(name, value)
 
 
+class HttpMethodTests(TestCase):
+    def test_invalid_method_names(self):
+        methods = (
+            'GET\r',
+            'POST\n',
+            'PUT\n\r',
+            'POST\nValue',
+            'POST\nHOST:abc',
+            'GET\nrHost:abc\n',
+            'POST\rRemainder:\r',
+            'GET\rHOST:\n',
+            '\nPUT'
+        )
+
+        for method in methods:
+            with self.assertRaisesRegex(
+                    ValueError, "method can't contain control characters"):
+                conn = client.HTTPConnection('example.com')
+                conn.sock = FakeSocket(None)
+                conn.request(method=method, url="/")
+
+
 class BasicTest(TestCase):
     def test_status_lines(self):
         # Test HTTP status lines
@@ -1227,6 +1249,7 @@ class TunnelTests(TestCase):
 @support.reap_threads
 def test_main(verbose=None):
     support.run_unittest(HeaderTests, OfflineTest, BasicTest, TimeoutTest,
+                         HttpMethodTests,
                          HTTPSTest, RequestBodyTest, SourceAddressTest,
                          HTTPResponseTest, TunnelTests)
 
