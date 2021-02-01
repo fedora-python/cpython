@@ -460,50 +460,62 @@ PyCArg_dealloc(PyCArgObject *self)
 static PyObject *
 PyCArg_repr(PyCArgObject *self)
 {
-    char buffer[256];
     switch(self->tag) {
     case 'b':
     case 'B':
-        sprintf(buffer, "<cparam '%c' (%d)>",
+        return PyString_FromFormat("<cparam '%c' (%d)>",
             self->tag, self->value.b);
-        break;
     case 'h':
     case 'H':
-        sprintf(buffer, "<cparam '%c' (%d)>",
+        return PyString_FromFormat("<cparam '%c' (%d)>",
             self->tag, self->value.h);
-        break;
     case 'i':
     case 'I':
-        sprintf(buffer, "<cparam '%c' (%d)>",
+        return PyString_FromFormat("<cparam '%c' (%d)>",
             self->tag, self->value.i);
-        break;
     case 'l':
     case 'L':
-        sprintf(buffer, "<cparam '%c' (%ld)>",
+        return PyString_FromFormat("<cparam '%c' (%ld)>",
             self->tag, self->value.l);
-        break;
 
 #ifdef HAVE_LONG_LONG
     case 'q':
     case 'Q':
-        sprintf(buffer,
-            "<cparam '%c' (%" PY_FORMAT_LONG_LONG "d)>",
+        return PyString_FromFormat("<cparam '%c' (%lld)>",
             self->tag, self->value.q);
-        break;
 #endif
     case 'd':
-        sprintf(buffer, "<cparam '%c' (%f)>",
-            self->tag, self->value.d);
-        break;
-    case 'f':
-        sprintf(buffer, "<cparam '%c' (%f)>",
-            self->tag, self->value.f);
-        break;
-
+    case 'f': {
+        PyObject *s = PyString_FromFormat("<cparam '%c' (", self->tag);
+        if (s == NULL) {
+            return NULL;
+        }
+        PyObject *f = PyFloat_FromDouble((self->tag == 'f') ? self->value.f : self->value.d);
+        if (f == NULL) {
+            Py_DECREF(s);
+            return NULL;
+        }
+        PyObject *r = PyObject_Repr(f);
+        Py_DECREF(f);
+        if (r == NULL) {
+            Py_DECREF(s);
+            return NULL;
+        }
+        PyString_ConcatAndDel(&s, r);
+        if (s == NULL) {
+            return NULL;
+        }
+        r = PyString_FromString(")>");
+        if (r == NULL) {
+            Py_DECREF(s);
+            return NULL;
+        }
+        PyString_ConcatAndDel(&s, r);
+        return s;
+    }
     case 'c':
-        sprintf(buffer, "<cparam '%c' (%c)>",
+        return PyString_FromFormat("<cparam '%c' ('%c')>",
             self->tag, self->value.c);
-        break;
 
 /* Hm, are these 'z' and 'Z' codes useful at all?
    Shouldn't they be replaced by the functionality of c_string
@@ -512,16 +524,13 @@ PyCArg_repr(PyCArgObject *self)
     case 'z':
     case 'Z':
     case 'P':
-        sprintf(buffer, "<cparam '%c' (%p)>",
+        return PyUnicode_FromFormat("<cparam '%c' (%p)>",
             self->tag, self->value.p);
-        break;
 
     default:
-        sprintf(buffer, "<cparam '%c' at %p>",
-            self->tag, self);
-        break;
+        return PyString_FromFormat("<cparam '%c' at %p>",
+            (unsigned char)self->tag, (void *)self);
     }
-    return PyString_FromString(buffer);
 }
 
 static PyMemberDef PyCArgType_members[] = {
