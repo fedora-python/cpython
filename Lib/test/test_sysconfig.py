@@ -263,7 +263,7 @@ class TestSysConfig(unittest.TestCase):
         self.assertTrue(os.path.isfile(config_h), config_h)
 
     def test_get_scheme_names(self):
-        wanted = ['nt', 'posix_home', 'posix_prefix']
+        wanted = ['nt', 'posix_home', 'posix_prefix', 'rpm_prefix', 'venv']
         if HAS_USER_BASE:
             wanted.extend(['nt_user', 'osx_framework_user', 'posix_user'])
         self.assertEqual(get_scheme_names(), tuple(sorted(wanted)))
@@ -274,6 +274,8 @@ class TestSysConfig(unittest.TestCase):
             cmd = "-c", "import sysconfig; print(sysconfig.get_platform())"
             self.assertEqual(py.call_real(*cmd), py.call_link(*cmd))
 
+    @unittest.skipIf('RPM_BUILD_ROOT' not in os.environ,
+                     "Test doesn't expect Fedora's paths")
     def test_user_similar(self):
         # Issue #8759: make sure the posix scheme for the users
         # is similar to the global posix_prefix one
