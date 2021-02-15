@@ -110,8 +110,19 @@ class TestSysConfig(unittest.TestCase):
         for scheme in _INSTALL_SCHEMES:
             for name in _INSTALL_SCHEMES[scheme]:
                 expected = _INSTALL_SCHEMES[scheme][name].format(**config_vars)
+                tested = get_path(name, scheme)
+                # https://fedoraproject.org/wiki/Changes/Making_sudo_pip_safe
+                if tested.startswith('/usr/local'):
+                    # /usr/local should only be used in posix_prefix
+                    self.assertEqual(scheme, 'posix_prefix')
+                    # Fedora CI runs tests for venv and virtualenv that check for other prefixes
+                    self.assertEqual(sys.prefix, '/usr')
+                    # When building the RPM of Python, %check runs this with RPM_BUILD_ROOT set
+                    # Fedora CI runs this with RPM_BUILD_ROOT unset
+                    self.assertNotIn('RPM_BUILD_ROOT', os.environ)
+                    tested = tested.replace('/usr/local', '/usr')
                 self.assertEqual(
-                    os.path.normpath(get_path(name, scheme)),
+                    os.path.normpath(tested),
                     os.path.normpath(expected),
                 )
 
@@ -344,7 +355,7 @@ class TestSysConfig(unittest.TestCase):
         self.assertTrue(os.path.isfile(config_h), config_h)
 
     def test_get_scheme_names(self):
-        wanted = ['nt', 'posix_home', 'posix_prefix', 'posix_venv', 'nt_venv', 'venv']
+        wanted = ['nt', 'posix_home', 'posix_prefix', 'posix_venv', 'nt_venv', 'venv', 'rpm_prefix']
         if HAS_USER_BASE:
             wanted.extend(['nt_user', 'osx_framework_user', 'posix_user'])
         self.assertEqual(get_scheme_names(), tuple(sorted(wanted)))
@@ -356,6 +367,8 @@ class TestSysConfig(unittest.TestCase):
             cmd = "-c", "import sysconfig; print(sysconfig.get_platform())"
             self.assertEqual(py.call_real(*cmd), py.call_link(*cmd))
 
+    @unittest.skipIf('RPM_BUILD_ROOT' not in os.environ,
+                     "Test doesn't expect Fedora's paths")
     def test_user_similar(self):
         # Issue #8759: make sure the posix scheme for the users
         # is similar to the global posix_prefix one
