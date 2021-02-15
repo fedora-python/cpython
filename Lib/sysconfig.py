@@ -58,6 +58,16 @@ _INSTALL_SCHEMES = {
         },
     }
 
+# For a brief period of time in the Fedora 36 life cycle,
+# this installation scheme existed and was documented in the release notes.
+# For backwards compatibility, we keep it here (at least on 3.10 and 3.11).
+_INSTALL_SCHEMES['rpm_prefix'] = _INSTALL_SCHEMES['posix_prefix']
+# Virtualenv >= 20.10.0 favors the "venv" scheme over the defaults when creating virtual environments.
+# See: https://github.com/pypa/virtualenv/commit/8da79db86d8a5c74d03667a40e64ff832076445e
+# See: https://bugs.python.org/issue45413
+# "venv" should be the same as the posix_prefix for us,
+# so new virtual environments aren't created with paths like venv/local/bin/python.
+_INSTALL_SCHEMES['venv'] = _INSTALL_SCHEMES['posix_prefix']
 
 # NOTE: site.py has copy of this function.
 # Sync it when modify this function.
@@ -116,6 +126,19 @@ if _HAS_USER_BASE:
             'data': '{userbase}',
             },
     }
+
+# This is used by distutils.command.install in the stdlib
+# as well as pypa/distutils (e.g. bundled in setuptools).
+# The self.prefix value is set to sys.prefix + /local/
+# if neither RPM build nor virtual environment is
+# detected to make distutils install packages
+# into the separate location.
+# https://fedoraproject.org/wiki/Changes/Making_sudo_pip_safe
+if (not (hasattr(sys, 'real_prefix') or
+    sys.prefix != sys.base_prefix) and
+    'RPM_BUILD_ROOT' not in os.environ):
+    _prefix_addition = '/local'
+
 
 _SCHEME_KEYS = ('stdlib', 'platstdlib', 'purelib', 'platlib', 'include',
                 'scripts', 'data')
@@ -211,11 +234,39 @@ def _extend_dict(target_dict, other_dict):
         target_dict[key] = value
 
 
+_CONFIG_VARS_LOCAL = None
+
+
+def _config_vars_local():
+    # This function returns the config vars with prefixes amended to /usr/local
+    # https://fedoraproject.org/wiki/Changes/Making_sudo_pip_safe
+    global _CONFIG_VARS_LOCAL
+    if _CONFIG_VARS_LOCAL is None:
+        _CONFIG_VARS_LOCAL = dict(get_config_vars())
+        _CONFIG_VARS_LOCAL['base'] = '/usr/local'
+        _CONFIG_VARS_LOCAL['platbase'] = '/usr/local'
+    return _CONFIG_VARS_LOCAL
+
+
 def _expand_vars(scheme, vars):
     res = {}
     if vars is None:
         vars = {}
-    _extend_dict(vars, get_config_vars())
+
+    # when we are not in a virtual environment or an RPM build
+    # we change '/usr' to '/usr/local'
+    # to avoid surprises, we explicitly check for the /usr/ prefix
+    # Python virtual environments have different prefixes
+    # we only do this for posix_prefix, not to mangle the venv scheme
+    # posix_prefix is used by sudo pip install
+    # we only change the defaults here, so explicit --prefix will take precedence
+    # https://fedoraproject.org/wiki/Changes/Making_sudo_pip_safe
+    if (scheme == 'posix_prefix' and
+        _PREFIX == '/usr' and
+        'RPM_BUILD_ROOT' not in os.environ):
+            _extend_dict(vars, _config_vars_local())
+    else:
+        _extend_dict(vars, get_config_vars())
 
     for key, value in _INSTALL_SCHEMES[scheme].items():
         if os.name in ('posix', 'nt'):
