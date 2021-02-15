@@ -58,6 +58,31 @@ _INSTALL_SCHEMES = {
         },
     }
 
+# backup the original posix_prefix as rpm_prefix
+# RPM packages use it and we need to be able to read it even when changed
+_INSTALL_SCHEMES['rpm_prefix'] = _INSTALL_SCHEMES['posix_prefix']
+# Virtualenv >= 20.10.0 favors the "venv" scheme over the defaults when creating virtual environments.
+# See: https://github.com/pypa/virtualenv/commit/8da79db86d8a5c74d03667a40e64ff832076445e
+# See: https://bugs.python.org/issue45413
+# "venv" should be the same as the unpatched posix_prefix for us,
+# so new virtual environments aren't created with paths like venv/local/bin/python.
+_INSTALL_SCHEMES['venv'] = _INSTALL_SCHEMES['posix_prefix']
+
+if (not (hasattr(sys, 'real_prefix') or
+    sys.prefix != sys.base_prefix) and
+    'RPM_BUILD_ROOT' not in os.environ):
+        _INSTALL_SCHEMES['posix_prefix'] = {
+            'stdlib': '{installed_base}/{platlibdir}/python{py_version_short}',
+            'platstdlib': '{platbase}/{platlibdir}/python{py_version_short}',
+            'purelib': '{base}/local/lib/python{py_version_short}/site-packages',
+            'platlib': '{platbase}/local/{platlibdir}/python{py_version_short}/site-packages',
+            'include':
+                '{installed_base}/include/python{py_version_short}{abiflags}',
+            'platinclude':
+                '{installed_platbase}/include/python{py_version_short}{abiflags}',
+            'scripts': '{base}/local/bin',
+            'data': '{base}/local',
+        }
 
 # NOTE: site.py has copy of this function.
 # Sync it when modify this function.
