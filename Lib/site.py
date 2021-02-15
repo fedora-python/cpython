@@ -322,8 +322,13 @@ class StartupState:
         Site-packages directories are computed from *prefixes*, or from the
         global PREFIXES when *prefixes* is None.  Each directory's startup
         data is accumulated for later processing by process().
+
+        '/usr/local' is included in PREFIXES if RPM build is not detected
+        to make packages installed into this location visible.
         """
         _trace("Processing global site-packages")
+        if ENABLE_USER_SITE and 'RPM_BUILD_ROOT' not in os.environ:
+            PREFIXES.insert(0, "/usr/local")
         for sitedir in getsitepackages(prefixes):
             if os.path.isdir(sitedir):
                 self.addsitedir(sitedir)
