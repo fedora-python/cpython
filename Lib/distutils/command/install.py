@@ -159,6 +159,8 @@ class install(Command):
 
     negative_opt = {'no-compile' : 'compile'}
 
+    # Allow Fedora to add components to the prefix
+    _prefix_addition = getattr(sysconfig, '_prefix_addition', '')
 
     def initialize_options(self):
         """Initializes options."""
@@ -441,8 +443,10 @@ class install(Command):
                     raise DistutilsOptionError(
                           "must not supply exec-prefix without prefix")
 
-                self.prefix = os.path.normpath(sys.prefix)
-                self.exec_prefix = os.path.normpath(sys.exec_prefix)
+                self.prefix = (
+                    os.path.normpath(sys.prefix) + self._prefix_addition)
+                self.exec_prefix = (
+                    os.path.normpath(sys.exec_prefix) + self._prefix_addition)
 
             else:
                 if self.exec_prefix is None:
