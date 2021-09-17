@@ -365,6 +365,25 @@ class HTTPMessage(mimetools.Message):
                 # It's not a header line; skip it and try the next line.
                 self.status = 'Non-header line where header expected'
 
+
+def _read_headers(fp):
+    """Reads potential header lines into a list from a file pointer.
+    Length of line is limited by _MAXLINE, and number of
+    headers is limited by _MAXHEADERS.
+    """
+    headers = []
+    while True:
+        line = fp.readline(_MAXLINE + 1)
+        if len(line) > _MAXLINE:
+            raise LineTooLong("header line")
+        headers.append(line)
+        if len(headers) > _MAXHEADERS:
+            raise HTTPException("got more than %d headers" % _MAXHEADERS)
+        if line in (b'\r\n', b'\n', b''):
+            break
+    return headers
+
+
 class HTTPResponse:
 
     # strict: If true, raise BadStatusLine if the status line can't be
@@ -453,15 +472,10 @@ class HTTPResponse:
             if status != CONTINUE:
                 break
             # skip the header from the 100 response
-            while True:
-                skip = self.fp.readline(_MAXLINE + 1)
-                if len(skip) > _MAXLINE:
-                    raise LineTooLong("header line")
-                skip = skip.strip()
-                if not skip:
-                    break
-                if self.debuglevel > 0:
-                    print "header:", skip
+            skipped_headers = _read_headers(self.fp)
+            if self.debuglevel > 0:
+                print("headers:", skipped_headers)
+            del skipped_headers
 
         self.status = status
         self.reason = reason.strip()
