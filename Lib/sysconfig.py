@@ -61,7 +61,7 @@ _INSTALL_SCHEMES = {
 # backup the original posix_prefix as rpm_prefix
 # RPM packages use it and we need to be able to read it even when changed
 _INSTALL_SCHEMES['rpm_prefix'] = _INSTALL_SCHEMES['posix_prefix']
-# Virtualenv from 20.10.0 favors a new "venv" scheme over the defaults.
+# Virtualenv >= 20.10.0 favors the "venv" scheme over the defaults when creating virtual environments.
 # See: https://github.com/pypa/virtualenv/commit/8da79db86d8a5c74d03667a40e64ff832076445e
 # See: https://bugs.python.org/issue45413
 # "venv" should be the same as the unpatched posix_prefix for us,
