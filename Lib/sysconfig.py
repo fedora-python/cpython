@@ -63,7 +63,8 @@ _INSTALL_SCHEMES = {
 _INSTALL_SCHEMES['rpm_prefix'] = _INSTALL_SCHEMES['posix_prefix']
 # Virtualenv from 20.10.0 favors a new "venv" scheme over the defaults.
 # See: https://github.com/pypa/virtualenv/commit/8da79db86d8a5c74d03667a40e64ff832076445e
-# "venv" should be the same as the default for us.
+# "venv" should be the same as the unpatched posix_prefix for us,
+# so new virtual environments aren't created with paths like venv/local/bin/python.
 _INSTALL_SCHEMES['venv'] = _INSTALL_SCHEMES['posix_prefix']
 
 if (not (hasattr(sys, 'real_prefix') or
