@@ -220,7 +220,7 @@ class TestVec2D(VectorComparisonMixin, unittest.TestCase):
     def test_distance(self):
         vec = Vec2D(6, 8)
         expected = 10
-        self.assertEqual(abs(vec), expected)
+        self.assertAlmostEqual(abs(vec), expected)
 
         vec = Vec2D(0, 0)
         expected = 0
@@ -228,7 +228,7 @@ class TestVec2D(VectorComparisonMixin, unittest.TestCase):
 
         vec = Vec2D(2.5, 6)
         expected = 6.5
-        self.assertEqual(abs(vec), expected)
+        self.assertAlmostEqual(abs(vec), expected)
 
     def test_rotate(self):
 
