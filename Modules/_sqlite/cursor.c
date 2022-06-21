@@ -1126,10 +1126,13 @@ pysqlite_cursor_iternext(pysqlite_Cursor *self)
     int rc = stmt_step(stmt);
     if (rc == SQLITE_DONE) {
         (void)stmt_reset(self->statement);
+        Py_CLEAR(self->statement);
     }
     else if (rc != SQLITE_ROW) {
         (void)_pysqlite_seterror(self->connection->state,
                                  self->connection->db);
+        (void)stmt_reset(self->statement);
+        Py_CLEAR(self->statement);
         Py_DECREF(row);
         return NULL;
     }
