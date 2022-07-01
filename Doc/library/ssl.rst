@@ -760,6 +760,12 @@ Constants
 
    .. versionadded:: 2.7.9
 
+.. data:: OP_IGNORE_UNEXPECTED_EOF
+
+   Ignore unexpected shutdown of TLS connections.
+
+   This option is only available with OpenSSL 3.0.0 and later.
+
 .. data:: HAS_ALPN
 
    Whether the OpenSSL library has built-in support for the *Application-Layer

@@ -99,7 +99,13 @@ struct py_ssl_library_code {
 };
 
 /* Include generated data (error codes) */
+#if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+#include "_ssl_data_300.h"
+#elif (OPENSSL_VERSION_NUMBER >= 0x10101000L) && !defined(LIBRESSL_VERSION_NUMBER)
+#include "_ssl_data_111.h"
+#else
 #include "_ssl_data.h"
+#endif
 
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L) && !defined(LIBRESSL_VERSION_NUMBER)
 #  define OPENSSL_VERSION_1_1 1
@@ -1066,6 +1072,54 @@ _get_peer_alt_names (X509 *certificate) {
                 PyTuple_SET_ITEM(t, 1, v);
                 break;
 
+            case GEN_IPADD:
+                /* OpenSSL < 3.0.0 adds a trailing \n to IPv6. 3.0.0 removed
+                 * the trailing newline. Keep it
+                 */
+                t = PyTuple_New(2);
+                if (t == NULL)
+                    goto fail;
+
+                v = PyUnicode_FromString("IP Address");
+                if (v == NULL) {
+                    Py_DECREF(t);
+                    goto fail;
+                }
+                PyTuple_SET_ITEM(t, 0, v);
+
+                if (name->d.ip->length == 4) {
+                    unsigned char *p = name->d.ip->data;
+                    v = PyUnicode_FromFormat(
+                        "%d.%d.%d.%d",
+                        p[0], p[1], p[2], p[3]
+                    );
+                } else if (name->d.ip->length == 16) {
+                    /* PyUnicode_FromFormat() does not support %X */
+                    unsigned char *p = name->d.ip->data;
+                    len = sprintf(
+                        buf,
+                        "%X:%X:%X:%X:%X:%X:%X:%X\n",
+                        p[0] << 8 | p[1],
+                        p[2] << 8 | p[3],
+                        p[4] << 8 | p[5],
+                        p[6] << 8 | p[7],
+                        p[8] << 8 | p[9],
+                        p[10] << 8 | p[11],
+                        p[12] << 8 | p[13],
+                        p[14] << 8 | p[15]
+                    );
+                    v = PyUnicode_FromStringAndSize(buf, len);
+                } else {
+                    v = PyUnicode_FromString("<invalid>");
+                }
+
+                if (v == NULL) {
+                    Py_DECREF(t);
+                    goto fail;
+                }
+                PyTuple_SET_ITEM(t, 1, v);
+                break;
+
             default:
                 /* for everything else, we use the OpenSSL print form */
                 switch (gntype) {
@@ -1073,7 +1127,6 @@ _get_peer_alt_names (X509 *certificate) {
                     case GEN_OTHERNAME:
                     case GEN_X400:
                     case GEN_EDIPARTY:
-                    case GEN_IPADD:
                     case GEN_RID:
                         break;
                     default:
@@ -2260,6 +2313,10 @@ context_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 #ifdef SSL_OP_SINGLE_ECDH_USE
     options |= SSL_OP_SINGLE_ECDH_USE;
 #endif
+#ifdef SSL_OP_IGNORE_UNEXPECTED_EOF
+    /* Make OpenSSL 3.0.0 behave like 1.1.1 */
+    options |= SSL_OP_IGNORE_UNEXPECTED_EOF;
+#endif
     SSL_CTX_set_options(self->ctx, options);
 
     /* A bare minimum cipher list without completly broken cipher suites.
@@ -2866,7 +2923,7 @@ _add_ca_certs(PySSLContext *self, void *data, Py_ssize_t len,
 {
     BIO *biobuf = NULL;
     X509_STORE *store;
-    int retval = 0, err, loaded = 0;
+    int retval = -1, err, loaded = 0;
 
     assert(filetype == SSL_FILETYPE_ASN1 || filetype == SSL_FILETYPE_PEM);
 
@@ -2920,23 +2977,32 @@ _add_ca_certs(PySSLContext *self, void *data, Py_ssize_t len,
     }
 
     err = ERR_peek_last_error();
-    if ((filetype == SSL_FILETYPE_ASN1) &&
-            (loaded > 0) &&
-            (ERR_GET_LIB(err) == ERR_LIB_ASN1) &&
-            (ERR_GET_REASON(err) == ASN1_R_HEADER_TOO_LONG)) {
+    if (loaded == 0) {
+        char *msg = NULL;
+        if (filetype == SSL_FILETYPE_PEM) {
+            msg = "no start line: cadata does not contain a certificate";
+        } else {
+            msg = "not enough data: cadata does not contain a certificate";
+        }
+        _setSSLError(msg, 0, __FILE__, __LINE__);
+        retval = -1;
+    } else if ((filetype == SSL_FILETYPE_ASN1) &&
+                    (ERR_GET_LIB(err) == ERR_LIB_ASN1) &&
+                    (ERR_GET_REASON(err) == ASN1_R_HEADER_TOO_LONG)) {
         /* EOF ASN1 file, not an error */
         ERR_clear_error();
         retval = 0;
     } else if ((filetype == SSL_FILETYPE_PEM) &&
-                   (loaded > 0) &&
                    (ERR_GET_LIB(err) == ERR_LIB_PEM) &&
                    (ERR_GET_REASON(err) == PEM_R_NO_START_LINE)) {
         /* EOF PEM file, not an error */
         ERR_clear_error();
         retval = 0;
-    } else {
+    } else if (err != 0) {
         _setSSLError(NULL, 0, __FILE__, __LINE__);
         retval = -1;
+    } else {
+        retval = 0;
     }
 
     BIO_free(biobuf);
@@ -4414,6 +4480,10 @@ init_ssl(void)
 #ifdef SSL_OP_ENABLE_MIDDLEBOX_COMPAT
     PyModule_AddIntConstant(m, "OP_ENABLE_MIDDLEBOX_COMPAT",
                             SSL_OP_ENABLE_MIDDLEBOX_COMPAT);
+#endif
+#ifdef SSL_OP_IGNORE_UNEXPECTED_EOF
+    PyModule_AddIntConstant(m, "OP_IGNORE_UNEXPECTED_EOF",
+                            SSL_OP_IGNORE_UNEXPECTED_EOF);
 #endif
 
 #if HAVE_SNI
