@@ -609,6 +609,15 @@ def get_config_vars(*args):
         _CONFIG_VARS['platbase'] = _EXEC_PREFIX
         _CONFIG_VARS['projectbase'] = _PROJECT_BASE
         _CONFIG_VARS['platlibdir'] = sys.platlibdir
+
+        # when we are not in virtual environment or RPM build
+        # we change '/usr/'  to '/usr/local'
+        # to avoid surprises, we explicitly check for the hardcoded values
+        # https://fedoraproject.org/wiki/Changes/Making_sudo_pip_safe
+        if _PREFIX == '/usr' and 'RPM_BUILD_ROOT' not in os.environ:
+            _CONFIG_VARS['base'] = '/usr/local'
+            _CONFIG_VARS['platbase'] = '/usr/local'
+
         try:
             _CONFIG_VARS['abiflags'] = sys.abiflags
         except AttributeError:
