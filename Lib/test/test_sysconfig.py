@@ -105,8 +105,19 @@ class TestSysConfig(unittest.TestCase):
         for scheme in _INSTALL_SCHEMES:
             for name in _INSTALL_SCHEMES[scheme]:
                 expected = _INSTALL_SCHEMES[scheme][name].format(**config_vars)
+                tested = get_path(name, scheme)
+                # https://fedoraproject.org/wiki/Changes/Making_sudo_pip_safe
+                if tested.startswith('/usr/local'):
+                    # /usr/local should only be used in posix_prefix
+                    self.assertEqual(scheme, 'posix_prefix')
+                    # Fedora CI runs tests for venv and virtualenv that check for other prefixes
+                    self.assertEqual(sys.prefix, '/usr')
+                    # When building the RPM of Python, %check runs this with RPM_BUILD_ROOT set
+                    # Fedora CI runs this with RPM_BUILD_ROOT unset
+                    self.assertNotIn('RPM_BUILD_ROOT', os.environ)
+                    tested = tested.replace('/usr/local', '/usr')
                 self.assertEqual(
-                    os.path.normpath(get_path(name, scheme)),
+                    os.path.normpath(tested),
                     os.path.normpath(expected),
                 )
 
