@@ -234,11 +234,39 @@ def _extend_dict(target_dict, other_dict):
         target_dict[key] = value
 
 
+_CONFIG_VARS_LOCAL = None
+
+
+def _config_vars_local():
+    # This function returns the config vars with prefixes amended to /usr/local
+    # https://fedoraproject.org/wiki/Changes/Making_sudo_pip_safe
+    global _CONFIG_VARS_LOCAL
+    if _CONFIG_VARS_LOCAL is None:
+        _CONFIG_VARS_LOCAL = dict(get_config_vars())
+        _CONFIG_VARS_LOCAL['base'] = '/usr/local'
+        _CONFIG_VARS_LOCAL['platbase'] = '/usr/local'
+    return _CONFIG_VARS_LOCAL
+
+
 def _expand_vars(scheme, vars):
     res = {}
     if vars is None:
         vars = {}
-    _extend_dict(vars, get_config_vars())
+
+    # when we are not in a virtual environment or an RPM build
+    # we change '/usr' to '/usr/local'
+    # to avoid surprises, we explicitly check for the /usr/ prefix
+    # Python virtual environments have different prefixes
+    # we only do this for posix_prefix, not to mangle the venv scheme
+    # posix_prefix is used by sudo pip install
+    # we only change the defaults here, so explicit --prefix will take precedence
+    # https://fedoraproject.org/wiki/Changes/Making_sudo_pip_safe
+    if (scheme == 'posix_prefix' and
+        _PREFIX == '/usr' and
+        'RPM_BUILD_ROOT' not in os.environ):
+            _extend_dict(vars, _config_vars_local())
+    else:
+        _extend_dict(vars, get_config_vars())
 
     for key, value in _INSTALL_SCHEMES[scheme].items():
         if os.name in ('posix', 'nt'):
@@ -622,15 +650,6 @@ def get_config_vars(*args):
         _CONFIG_VARS['platbase'] = _EXEC_PREFIX
         _CONFIG_VARS['projectbase'] = _PROJECT_BASE
         _CONFIG_VARS['platlibdir'] = sys.platlibdir
-
-        # when we are not in virtual environment or RPM build
-        # we change '/usr/'  to '/usr/local'
-        # to avoid surprises, we explicitly check for the hardcoded values
-        # https://fedoraproject.org/wiki/Changes/Making_sudo_pip_safe
-        if _PREFIX == '/usr' and 'RPM_BUILD_ROOT' not in os.environ:
-            _CONFIG_VARS['base'] = '/usr/local'
-            _CONFIG_VARS['platbase'] = '/usr/local'
-
         try:
             _CONFIG_VARS['abiflags'] = sys.abiflags
         except AttributeError:
