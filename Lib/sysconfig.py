@@ -296,7 +296,7 @@ def _expand_vars(scheme, vars):
         vars = {}
 
     # when we are not in a virtual environment or an RPM build
-    # we change '/usr/'  to '/usr/local'
+    # we change '/usr' to '/usr/local'
     # to avoid surprises, we explicitly check for the /usr/ prefix
     # Python virtual environments have different prefixes
     # we only do this for posix_prefix, not to mangle the venv scheme
