@@ -571,6 +571,14 @@ class ASTHelpers_Test(unittest.TestCase):
         exec(code, ns)
         self.assertIn('sleep', ns)
 
+    def test_literal_eval_str_int_limit(self):
+        with support.adjust_int_max_str_digits(4000):
+            ast.literal_eval('3'*4000)  # no error
+            with self.assertRaises(SyntaxError) as err_ctx:
+                ast.literal_eval('3'*4001)
+            self.assertIn('Exceeds the limit ', str(err_ctx.exception))
+            self.assertIn(' Consider hexadecimal ', str(err_ctx.exception))
+
 
 class ASTValidatorTests(unittest.TestCase):
 
