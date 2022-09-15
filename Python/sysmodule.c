@@ -1079,6 +1079,46 @@ sys_mdebug(PyObject *self, PyObject *args)
 }
 #endif /* USE_MALLOPT */
 
+static PyObject *
+sys_get_int_max_str_digits(PyObject *module, PyObject *Py_UNUSED(ignored))
+{
+    return PyLong_FromSsize_t(_Py_global_config_int_max_str_digits);
+}
+
+PyDoc_STRVAR(sys_get_int_max_str_digits__doc__,
+"get_int_max_str_digits($module, /)\n"
+"--\n"
+"\n"
+"Set the maximum string digits limit for non-binary int<->str conversions.");
+
+static PyObject *
+sys_set_int_max_str_digits(PyObject *module, PyObject *args, PyObject *kwds)
+{
+    static char *kwlist[] = {"maxdigits", NULL};
+    int maxdigits;
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "i:set_int_max_str_digits",
+                                     kwlist, &maxdigits))
+        return NULL;
+
+    if ((!maxdigits) || (maxdigits >= _PY_LONG_MAX_STR_DIGITS_THRESHOLD)) {
+        _Py_global_config_int_max_str_digits = maxdigits;
+        Py_RETURN_NONE;
+    } else {
+        PyErr_Format(
+            PyExc_ValueError, "maxdigits must be 0 or larger than %d",
+            _PY_LONG_MAX_STR_DIGITS_THRESHOLD);
+        return NULL;
+    }
+}
+
+PyDoc_STRVAR(sys_set_int_max_str_digits__doc__,
+"set_int_max_str_digits($module, /, maxdigits)\n"
+"--\n"
+"\n"
+"Set the maximum string digits limit for non-binary int<->str conversions.");
+
+
 size_t
 _PySys_GetSizeOf(PyObject *o)
 {
@@ -1434,6 +1474,8 @@ static PyMethodDef sys_methods[] = {
      METH_VARARGS | METH_KEYWORDS, set_asyncgen_hooks_doc},
     {"get_asyncgen_hooks", sys_get_asyncgen_hooks, METH_NOARGS,
      get_asyncgen_hooks_doc},
+    {"get_int_max_str_digits", sys_get_int_max_str_digits, METH_NOARGS, sys_get_int_max_str_digits__doc__},
+    {"set_int_max_str_digits", (PyCFunction)sys_set_int_max_str_digits, METH_VARARGS|METH_KEYWORDS, sys_set_int_max_str_digits__doc__},
     {NULL,              NULL}           /* sentinel */
 };
 
@@ -1681,6 +1723,7 @@ static PyStructSequence_Field flags_fields[] = {
     {"quiet",                   "-q"},
     {"hash_randomization",      "-R"},
     {"isolated",                "-I"},
+    {"int_max_str_digits",      "-X int_max_str_digits"},
     {0}
 };
 
@@ -1688,7 +1731,7 @@ static PyStructSequence_Desc flags_desc = {
     "sys.flags",        /* name */
     flags__doc__,       /* doc */
     flags_fields,       /* fields */
-    13
+    14
 };
 
 static PyObject*
@@ -1719,6 +1762,7 @@ make_flags(void)
     SetFlag(Py_QuietFlag);
     SetFlag(Py_HashRandomizationFlag);
     SetFlag(Py_IsolatedFlag);
+    SetFlag(_Py_global_config_int_max_str_digits);
 #undef SetFlag
 
     if (PyErr_Occurred()) {

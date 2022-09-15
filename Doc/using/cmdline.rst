@@ -422,6 +422,9 @@ Miscellaneous options
    * ``-X showalloccount`` to output the total count of allocated objects for
      each type when the program finishes. This only works when Python was built with
      ``COUNT_ALLOCS`` defined.
+   * ``-X int_max_str_digits`` configures the :ref:`integer string conversion
+     length limitation <int_max_str_digits>`.  See also
+     :envvar:`PYTHONINTMAXSTRDIGITS`.
 
    It also allows passing arbitrary values and retrieving them through the
    :data:`sys._xoptions` dictionary.
@@ -437,6 +440,9 @@ Miscellaneous options
 
    .. versionadded:: 3.6
       The ``-X showalloccount`` option.
+
+   .. versionadded:: 3.6.15-13
+      The ``-X int_max_str_digits`` option.
 
 
 Options you shouldn't use
@@ -570,6 +576,14 @@ conflict.
 
    .. versionadded:: 3.2.3
 
+
+.. envvar:: PYTHONINTMAXSTRDIGITS
+
+   If this variable is set to an integer, it is used to configure the
+   interpreter's global :ref:`integer string conversion length limitation
+   <int_max_str_digits>`.
+
+   .. versionadded:: 3.6.15-13
 
 .. envvar:: PYTHONIOENCODING
 

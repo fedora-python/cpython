@@ -97,6 +97,8 @@ int Py_IsolatedFlag = 0; /* for -I, isolate from user's env */
 int Py_LegacyWindowsFSEncodingFlag = 0; /* Uses mbcs instead of utf-8 */
 int Py_LegacyWindowsStdioFlag = 0; /* Uses FileIO instead of WindowsConsoleIO */
 #endif
+/* Unusual name compared to the above for backporting from 3.12 reasons. */
+int _Py_global_config_int_max_str_digits = -1; /* -X int_max_str_digits or PYTHONINTMAXSTRDIGITS */
 
 PyThreadState *_Py_Finalizing = NULL;
 
