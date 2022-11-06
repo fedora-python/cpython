@@ -3185,7 +3185,7 @@ if test "$posix_threads" = "yes"; then
       void *foo(void *parm) {
         return NULL;
       }
-      main() {
+      int main() {
         pthread_attr_t attr;
         pthread_t id;
         if (pthread_attr_init(&attr)) exit(-1);
