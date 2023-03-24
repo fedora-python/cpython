@@ -1204,6 +1204,8 @@ class ContextTests(unittest.TestCase):
             "not enough data: cadata does not contain a certificate"
         ):
             ctx.load_verify_locations(cadata=b"broken")
+        with self.assertRaises(ssl.SSLError):
+            ctx.load_verify_locations(cadata=cacert_der + b"A")
 
     def test_load_dh_params(self):
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
