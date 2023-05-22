@@ -126,6 +126,12 @@ or on combining URL components into a URL string.
    ``#``, ``@``, or ``:`` will raise a :exc:`ValueError`. If the URL is
    decomposed before parsing, no error will be raised.
 
+
+   .. warning::
+
+      :func:`urlparse` does not perform validation.  See :ref:`URL parsing
+      security <url-parsing-security>` for details.
+
    .. versionchanged:: 3.2
       Added IPv6 URL parsing capabilities.
 
@@ -288,8 +294,14 @@ or on combining URL components into a URL string.
    ``#``, ``@``, or ``:`` will raise a :exc:`ValueError`. If the URL is
    decomposed before parsing, no error will be raised.
 
-   Following the `WHATWG spec`_ that updates RFC 3986, ASCII newline
-   ``\n``, ``\r`` and tab ``\t`` characters are stripped from the URL.
+   Following some of the `WHATWG spec`_ that updates RFC 3986, leading C0
+   control and space characters are stripped from the URL. ``\n``,
+   ``\r`` and tab ``\t`` characters are removed from the URL at any position.
+
+   .. warning::
+
+      :func:`urlsplit` does not perform validation.  See :ref:`URL parsing
+      security <url-parsing-security>` for details.
 
    .. versionchanged:: 3.6
       Out-of-range port numbers now raise :exc:`ValueError`, instead of
@@ -301,6 +313,9 @@ or on combining URL components into a URL string.
 
    .. versionchanged:: 3.6.14
       ASCII newline and tab characters are stripped from the URL.
+
+   .. versionchanged:: 3.6.15
+      Leading WHATWG C0 control and space characters are stripped from the URL.
 
 .. _WHATWG spec: https://url.spec.whatwg.org/#concept-basic-url-parser
 
@@ -370,6 +385,27 @@ or on combining URL components into a URL string.
 
    .. versionchanged:: 3.2
       Result is a structured object rather than a simple 2-tuple.
+
+.. _url-parsing-security:
+
+URL parsing security
+--------------------
+
+The :func:`urlsplit` and :func:`urlparse` APIs do not perform **validation** of
+inputs.  They may not raise errors on inputs that other applications consider
+invalid.  They may also succeed on some inputs that might not be considered
+URLs elsewhere.  Their purpose is for practical functionality rather than
+purity.
+
+Instead of raising an exception on unusual input, they may instead return some
+component parts as empty strings. Or components may contain more than perhaps
+they should.
+
+We recommend that users of these APIs where the values may be used anywhere
+with security implications code defensively. Do some verification within your
+code before trusting a returned component part.  Does that ``scheme`` make
+sense?  Is that a sensible ``path``?  Is there anything strange about that
+``hostname``?  etc.
 
 .. _parsing-ascii-encoded-bytes:
 
