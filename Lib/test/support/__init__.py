@@ -2398,5 +2398,26 @@ def adjust_int_max_str_digits(max_digits):
     finally:
         sys.set_int_max_str_digits(current)
 
+
+@functools.cache
+def _findwheel(pkgname):
+    """Try to find a wheel with the package specified as pkgname.
+
+    If set, the wheels are searched for in WHEEL_PKG_DIR (see ensurepip).
+    Otherwise, they are searched for in the test directory.
+    """
+    wheel_dir = sysconfig.get_config_var('WHEEL_PKG_DIR') or TEST_HOME_DIR
+    filenames = os.listdir(wheel_dir)
+    filenames = sorted(filenames)  # sort this like ensurepip does it
+    for filename in filenames:
+        # filename is like 'pip-21.2.4-py3-none-any.whl'
+        if not filename.endswith(".whl"):
+            continue
+        prefix = pkgname + '-'
+        if filename.startswith(prefix):
+            return os.path.join(wheel_dir, filename)
+    raise FileNotFoundError(f"No wheel for {pkgname} found in {wheel_dir}")
+
+
 #For recursion tests, easily exceeds default recursion limit
 EXCEEDS_RECURSION_LIMIT = 5000

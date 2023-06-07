@@ -83,8 +83,8 @@ class TestCPPExt(unittest.TestCase):
 
         cmd = [python, '-X', 'dev',
                '-m', 'pip', 'install',
-               support.findfile('setuptools-67.6.1-py3-none-any.whl'),
-               support.findfile('wheel-0.40.0-py3-none-any.whl')]
+               support._findwheel('setuptools'),
+               support._findwheel('wheel')]
         run_cmd('Install build dependencies', cmd)
 
         # Build and install the C++ extension
