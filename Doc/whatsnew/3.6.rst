@@ -2489,7 +2489,6 @@ URL by the parser :func:`urllib.parse` preventing such attacks. The removal
 characters are controlled by a new module level variable
 ``urllib.parse._UNSAFE_URL_BYTES_TO_REMOVE``. (See :issue:`43882`)
 
-
 Notable security feature in 3.6.15-13
 =====================================
 
@@ -2503,3 +2502,19 @@ This limit can be configured or disabled by environment variable, command
 line flag, or :mod:`sys` APIs. See the :ref:`integer string conversion
 length limitation <int_max_str_digits>` documentation.  The default limit
 is 4300 digits in string form.
+
+Notable Changes in a backport
+=============================
+
+tarfile
+-------
+
+* The extraction methods in :mod:`tarfile`, and :func:`shutil.unpack_archive`,
+  have a new a *filter* argument that allows limiting tar features than may be
+  surprising or dangerous, such as creating files outside the destination
+  directory.
+  See :ref:`tarfile-extraction-filter` for details.
+  In Python 3.12, use without the *filter* argument will show a
+  :exc:`DeprecationWarning`.
+  In Python 3.14, the default will switch to ``'data'``.
+  (Contributed by Petr Viktorin in :pep:`706`.)
