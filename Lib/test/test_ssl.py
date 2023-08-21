@@ -1393,7 +1393,9 @@ class SSLErrorTests(unittest.TestCase):
     def test_subclass(self):
         # Check that the appropriate SSLError subclass is raised
         # (this only tests one of them)
-        ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+        # since we are bypassing steps that refine the version, TLS-1.0, which is banned in
+        # openssl >= 3.1.0 causes an internal error. Use TLS-1.2 instead.
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
         with closing(socket.socket()) as s:
             s.bind(("127.0.0.1", 0))
             s.listen(5)
