@@ -4,6 +4,7 @@ import gc
 import locale
 import operator
 import os
+import random
 import struct
 import subprocess
 import sys
@@ -17,6 +18,17 @@ from test.support import import_helper
 import textwrap
 import unittest
 import warnings
+
+try:
+    from test.support import interpreters
+except ImportError:
+    interpreters = None
+
+
+def requires_subinterpreters(func):
+    deco = unittest.skipIf(interpreters is None,
+                     'Test requires subinterpreters')
+    return deco(func)
 
 
 # count the number of test runs, used to create unique
@@ -703,6 +715,35 @@ class SysModuleTest(unittest.TestCase):
                 return 123
 
         self.assertRaises(TypeError, sys.intern, S("abc"))
+
+    @requires_subinterpreters
+    def test_subinterp_intern_dynamically_allocated(self):
+        s = "never interned before" + str(random.randrange(0, 10**9))
+        t = sys.intern(s)
+        self.assertIs(t, s)
+
+        interp = interpreters.create()
+        interp.run(textwrap.dedent(f'''
+            import sys
+            t = sys.intern({s!r})
+            assert id(t) != {id(s)}, (id(t), {id(s)})
+            assert id(t) != {id(t)}, (id(t), {id(t)})
+            '''))
+
+    @requires_subinterpreters
+    def test_subinterp_intern_statically_allocated(self):
+        # See Tools/build/generate_global_objects.py for the list
+        # of strings that are always statically allocated.
+        s = '__init__'
+        t = sys.intern(s)
+
+        print('------------------------')
+        interp = interpreters.create()
+        interp.run(textwrap.dedent(f'''
+            import sys
+            t = sys.intern({s!r})
+            assert id(t) == {id(t)}, (id(t), {id(t)})
+            '''))
 
     def test_sys_flags(self):
         self.assertTrue(sys.flags)
