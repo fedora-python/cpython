@@ -306,7 +306,7 @@ def _expand_vars(scheme, vars):
     # we only change the defaults here, so explicit --prefix will take precedence
     # https://fedoraproject.org/wiki/Changes/Making_sudo_pip_safe
     if (scheme == 'posix_prefix' and
-         get_config_vars('prefix')[0] == '/usr' and
+        sys.prefix == '/usr' and
         'RPM_BUILD_ROOT' not in os.environ):
             _extend_dict(vars, _config_vars_local())
     else:
