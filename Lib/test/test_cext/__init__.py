@@ -53,7 +53,7 @@ class TestExt(unittest.TestCase):
             self.skipTest('Py_LIMITED_API is incompatible with Py_TRACE_REFS')
 
         venv_dir = 'env'
-        with support.setup_venv_with_pip_setuptools_wheel(venv_dir) as python_exe:
+        with support.setup_venv_with_pip_setuptools(venv_dir) as python_exe:
             self._check_build(extension_name, python_exe,
                               std=std, limited=limited)
 

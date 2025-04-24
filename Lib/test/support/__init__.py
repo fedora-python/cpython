@@ -2308,7 +2308,7 @@ def _findwheel(pkgname):
 # Context manager that creates a virtual environment, install setuptools in it,
 # and returns the paths to the venv directory and the python executable
 @contextlib.contextmanager
-def setup_venv_with_pip_setuptools_wheel(venv_dir):
+def setup_venv_with_pip_setuptools(venv_dir):
     import subprocess
     from .os_helper import temp_cwd
 
@@ -2331,8 +2331,7 @@ def setup_venv_with_pip_setuptools_wheel(venv_dir):
 
         cmd = (python, '-X', 'dev',
                '-m', 'pip', 'install',
-               _findwheel('setuptools'),
-               _findwheel('wheel'))
+               _findwheel('setuptools'))
         if verbose:
             print()
             print('Run:', ' '.join(cmd))
