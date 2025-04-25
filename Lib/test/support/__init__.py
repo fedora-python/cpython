@@ -2403,9 +2403,16 @@ def setup_venv_with_pip_setuptools(venv_dir):
         else:
             python = os.path.join(venv, 'bin', python_exe)
 
+        setuptools_whl = _findwheel('setuptools')
+        whl_filename = os.path.basename(setuptools_whl)
+        setuptools_major = int(whl_filename.split('-')[1].split('.')[0])
+        if setuptools_major >= 71:  # we need 70.1+, but that's OK
+            wheels = (setuptools_whl,)
+        else:
+            wheels = (setuptools_whl, _findwheel('wheel'))
         cmd = (python, '-X', 'dev',
                '-m', 'pip', 'install',
-               _findwheel('setuptools'),
+               *wheels,
                )
         run_command(cmd)
 
