@@ -847,6 +847,8 @@ class ReparseDeferralTest(unittest.TestCase):
 
         self.assertEqual(started, ['doc'])
 
+    @unittest.skipIf(expat.version_info < (2, 7, 1),
+                     f"Skip for expat < 2.7.1 (version available in RHEL 10)")
     def test_reparse_deferral_disabled(self):
         started = []
 
