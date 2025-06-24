@@ -1240,6 +1240,8 @@ class ExpatReaderTest(XmlTestBase):
 
         self.assertEqual(result.getvalue(), start + b"<doc></doc>")
 
+    @unittest.skipIf(pyexpat.version_info < (2, 7, 1),
+                     f"Skip for expat < 2.7.1 (version available in RHEL 10)")
     def test_flush_reparse_deferral_disabled(self):
         result = BytesIO()
         xmlgen = XMLGenerator(result)
