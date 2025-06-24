@@ -1547,9 +1547,13 @@ class XMLPullParserTest(unittest.TestCase):
         self.assert_event_tags(parser, [('end', 'root')])
         self.assertIsNone(parser.close())
 
+    @unittest.skipIf(pyexpat.version_info < (2, 7, 1),
+                     f"Skip for expat < 2.7.1 (version available in RHEL 10)")
     def test_simple_xml_chunk_1(self):
         self.test_simple_xml(chunk_size=1, flush=True)
 
+    @unittest.skipIf(pyexpat.version_info < (2, 7, 1),
+                     f"Skip for expat < 2.7.1 (version available in RHEL 10)")
     def test_simple_xml_chunk_5(self):
         self.test_simple_xml(chunk_size=5, flush=True)
 
@@ -1774,6 +1778,8 @@ class XMLPullParserTest(unittest.TestCase):
 
         self.assert_event_tags(parser, [('end', 'doc')])
 
+    @unittest.skipIf(pyexpat.version_info < (2, 7, 1),
+                     f"Skip for expat < 2.7.1 (version available in RHEL 10)")
     def test_flush_reparse_deferral_disabled(self):
         parser = ET.XMLPullParser(events=('start', 'end'))
 
