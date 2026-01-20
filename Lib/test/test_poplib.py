@@ -18,6 +18,7 @@ from test.support import threading_helper
 from test.support import asynchat
 from test.support import asyncore
 from test.support.testcase import ExtraAssertions
+from test.support import control_characters_c0
 
 
 test_support.requires_working_socket(module=True)
@@ -395,6 +396,13 @@ class TestPOP3Class(TestCase, ExtraAssertions):
         self.assertTrue(resp)
         self.assertIsNone(self.client.sock)
         self.assertIsNone(self.client.file)
+
+    def test_control_characters(self):
+        for c0 in control_characters_c0():
+            with self.assertRaises(ValueError):
+                self.client.user(f'user{c0}')
+            with self.assertRaises(ValueError):
+                self.client.pass_(f'{c0}pass')
 
     @requires_ssl
     def test_stls_capa(self):
