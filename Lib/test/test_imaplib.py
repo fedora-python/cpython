@@ -510,6 +510,12 @@ class NewIMAPTestsMixin():
         self.assertEqual(data[0], b'LOGIN completed')
         self.assertEqual(client.state, 'AUTH')
 
+    def test_control_characters(self):
+        client, _ = self._setup(SimpleIMAPHandler)
+        for c0 in support.control_characters_c0():
+            with self.assertRaises(ValueError):
+                client.login(f'user{c0}', 'pass')
+
     def test_logout(self):
         client, _ = self._setup(SimpleIMAPHandler)
         typ, data = client.login('user', 'pass')
