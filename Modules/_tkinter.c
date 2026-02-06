@@ -3611,6 +3611,12 @@ static struct PyModuleDef _tkintermodule = {
 PyMODINIT_FUNC
 PyInit__tkinter(void)
 {
+    #ifdef _PyHack_check_version_on_modinit
+        if (_PyHack_CheckInternalAPIVersion("_tkinter") < 0) {
+            return NULL;
+        }
+    #endif
+
     PyObject *m, *uexe, *cexe;
 
     tcl_lock = PyThread_allocate_lock();
