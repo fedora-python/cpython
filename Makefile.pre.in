@@ -3426,3 +3426,6 @@ MODULE__MULTIBYTECODEC_DEPS=$(srcdir)/Modules/cjkcodecs/multibytecodec.h
 # Local Variables:
 # mode: makefile
 # End:
+
+# Fedora-specific, downstream only
+PY_STDMODULE_CFLAGS += -D_PyHack_check_version_on_modinit=1
