@@ -116,6 +116,49 @@ struct PyModuleDef {
   freefunc m_free;
 };
 
+#if defined(_PyHack_check_version_on_modinit) && defined(Py_BUILD_CORE)
+/* The mechanism for the check has been implemented on Python 3.15+:
+ * https://github.com/python/cpython/pull/137212.
+ * In Fedora, we need this in older Pythons too:
+ * if somebody attempts to import a module compiled for a different Python version,
+ * instead of segmentation fault a meaningful error is raised.
+ */
+PyAPI_DATA(const unsigned long) Py_Version;
+
+static inline int
+_PyHack_CheckInternalAPIVersion(const char *mod_name)
+{
+    if (PY_VERSION_HEX != Py_Version) {
+        PyErr_Format(
+            PyExc_ImportError,
+            "internal Python C API version mismatch: "
+            "module %s compiled with %lu.%lu.%lu; "
+            "runtime version is %lu.%lu.%lu",
+            mod_name,
+            (const unsigned long)((PY_VERSION_HEX >> 24) & 0xFF),
+            (const unsigned long)((PY_VERSION_HEX >> 16) & 0xFF),
+            (const unsigned long)((PY_VERSION_HEX >> 8) & 0xFF),
+            (const unsigned long)((Py_Version >> 24) & 0xFF),
+            (const unsigned long)((Py_Version >> 16) & 0xFF),
+            (const unsigned long)((Py_Version >> 8) & 0xFF)
+        );
+        return -1;
+    }
+    return 0;
+}
+
+static inline PyObject *
+PyModuleDef_Init_with_check(PyModuleDef *def)
+{
+    if (_PyHack_CheckInternalAPIVersion(def->m_name) < 0) {
+        return NULL;
+    }
+    return PyModuleDef_Init(def);
+}
+
+#define PyModuleDef_Init PyModuleDef_Init_with_check
+#endif
+
 #ifdef __cplusplus
 }
 #endif
