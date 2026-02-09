@@ -43,6 +43,7 @@ _PyModule_IsExtension(PyObject *obj)
 }
 
 
+#undef PyModuleDef_Init
 PyObject*
 PyModuleDef_Init(PyModuleDef* def)
 {
