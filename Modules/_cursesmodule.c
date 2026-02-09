@@ -5011,6 +5011,12 @@ curses_destructor(PyObject *op)
 PyMODINIT_FUNC
 PyInit__curses(void)
 {
+    #ifdef _PyHack_check_version_on_modinit
+        if (_PyHack_CheckInternalAPIVersion("_curses") < 0) {
+            return NULL;
+        }
+    #endif
+
     PyObject *m, *d, *v, *c_api_object;
 
     /* Initialize object type */
