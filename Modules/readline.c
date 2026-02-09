@@ -1548,6 +1548,12 @@ static struct PyModuleDef readlinemodule = {
 PyMODINIT_FUNC
 PyInit_readline(void)
 {
+    #ifdef _PyHack_check_version_on_modinit
+        if (_PyHack_CheckInternalAPIVersion("readline") < 0) {
+            return NULL;
+        }
+    #endif
+
     const char *backend = "readline";
     PyObject *m;
     readlinestate *mod_state;
