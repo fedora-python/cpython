@@ -215,6 +215,12 @@ static struct PyModuleDef module_def = {
 PyMODINIT_FUNC
 PyInit__tracemalloc(void)
 {
+    #ifdef _PyHack_check_version_on_modinit
+        if (_PyHack_CheckInternalAPIVersion("_tracemalloc") < 0) {
+            return NULL;
+        }
+    #endif
+
     PyObject *m;
     m = PyModule_Create(&module_def);
     if (m == NULL)
