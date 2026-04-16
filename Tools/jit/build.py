@@ -42,6 +42,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--cflags", help="additional flags to pass to the compiler", default=""
     )
+    parser.add_argument(
+        "--prebuilt",
+        action="store_true",
+        help="accept prebuilt stencils even if the digest does not match",
+    )
     args = parser.parse_args()
     for target in args.target:
         target.debug = args.debug
@@ -52,6 +57,7 @@ if __name__ == "__main__":
         target.build(
             comment=comment,
             force=args.force,
+            prebuilt=args.prebuilt,
             jit_stencils=args.output_dir / f"jit_stencils-{target.triple}.h",
         )
     jit_stencils_h = args.output_dir / "jit_stencils.h"
