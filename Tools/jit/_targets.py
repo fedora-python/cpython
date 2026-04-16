@@ -205,6 +205,7 @@ class _Target(typing.Generic[_S, _R]):
         *,
         comment: str = "",
         force: bool = False,
+        prebuilt: bool = False,
         jit_stencils: pathlib.Path,
     ) -> None:
         """Build jit_stencils.h in the given directory."""
@@ -218,7 +219,7 @@ class _Target(typing.Generic[_S, _R]):
         if (
             not force
             and jit_stencils.exists()
-            and jit_stencils.read_text().startswith(digest)
+            and (prebuilt or jit_stencils.read_text().startswith(digest))
         ):
             return
         stencil_groups = ASYNCIO_RUNNER.run(self._build_stencils())
