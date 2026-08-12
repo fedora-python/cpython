@@ -1008,7 +1008,7 @@ class ExternalEntityParserCreateErrorTest(unittest.TestCase):
 class ReparseDeferralTest(unittest.TestCase):
     def test_getter_setter_round_trip(self):
         parser = expat.ParserCreate()
-        enabled = (expat.version_info >= (2, 6, 0))
+        enabled = (expat.version_info >= (2, 5, 0))
 
         self.assertIs(parser.GetReparseDeferralEnabled(), enabled)
         parser.SetReparseDeferralEnabled(False)
@@ -1017,7 +1017,7 @@ class ReparseDeferralTest(unittest.TestCase):
         self.assertIs(parser.GetReparseDeferralEnabled(), enabled)
 
     def test_reparse_deferral_enabled(self):
-        if expat.version_info < (2, 6, 0):
+        if expat.version_info < (2, 5, 0):
             self.skipTest(f'Expat {expat.version_info} does not '
                           'support reparse deferral')
 
@@ -1048,7 +1048,7 @@ class ReparseDeferralTest(unittest.TestCase):
 
         parser = expat.ParserCreate()
         parser.StartElementHandler = start_element
-        if expat.version_info >= (2, 6, 0):
+        if expat.version_info >= (2, 5, 0):
             parser.SetReparseDeferralEnabled(False)
         self.assertFalse(parser.GetReparseDeferralEnabled())
 
