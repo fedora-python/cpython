@@ -1898,7 +1898,7 @@ class XMLPullParserTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unknown event 'bogus'"):
             ET.XMLPullParser(events=(x.decode() for x in (b'start', b'end', b'bogus')))
 
-    @unittest.skipIf(pyexpat.version_info < (2, 6, 0),
+    @unittest.skipIf(pyexpat.version_info < (2, 5, 0),
                      f'Expat {pyexpat.version_info} does not '
                      'support reparse deferral')
     def test_flush_reparse_deferral_enabled(self):
@@ -1928,7 +1928,7 @@ class XMLPullParserTest(unittest.TestCase):
         for chunk in ("<doc", ">"):
             parser.feed(chunk)
 
-        if pyexpat.version_info >= (2, 6, 0):
+        if pyexpat.version_info >= (2, 5, 0):
             if not ET is pyET:
                 self.skipTest(f'XMLParser.(Get|Set)ReparseDeferralEnabled '
                               'methods not available in C')
