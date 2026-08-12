@@ -844,7 +844,7 @@ pyexpat_xmlparser_SetReparseDeferralEnabled_impl(xmlparseobject *self,
                                                  int enabled)
 /*[clinic end generated code: output=5ec539e3b63c8c49 input=6d3743500dcee799]*/
 {
-#if XML_COMBINED_VERSION >= 20600
+#if XML_COMBINED_VERSION >= 20500
     XML_SetReparseDeferralEnabled(self->itself, enabled ? XML_TRUE : XML_FALSE);
     self->reparse_deferral_enabled = (bool)enabled;
 #endif
@@ -1523,7 +1523,7 @@ newxmlparseobject(pyexpat_state *state, const char *encoding,
     self->ns_prefixes = 0;
     self->handlers = NULL;
     self->intern = Py_XNewRef(intern);
-#if XML_COMBINED_VERSION >= 20600
+#if XML_COMBINED_VERSION >= 20500
     self->reparse_deferral_enabled = true;
 #else
     self->reparse_deferral_enabled = false;
@@ -2441,7 +2441,7 @@ pyexpat_exec(PyObject *mod)
 #else
     capi->SetHashSalt16Bytes = NULL;
 #endif
-#if XML_COMBINED_VERSION >= 20600
+#if XML_COMBINED_VERSION >= 20500
     capi->SetReparseDeferralEnabled = XML_SetReparseDeferralEnabled;
 #else
     capi->SetReparseDeferralEnabled = NULL;
