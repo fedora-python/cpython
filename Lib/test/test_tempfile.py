@@ -8,6 +8,7 @@ import sys
 import re
 import warnings
 import contextlib
+import shutil
 import weakref
 from unittest import mock
 
@@ -1458,6 +1459,50 @@ class TestTemporaryDirectory(BaseTestCase):
                 new_flags = os.stat(dir1).st_flags
                 self.assertEqual(new_flags, old_flags)
 
+    @support.skip_unless_symlink
+    @unittest.skipUnless(shutil.rmtree.avoids_symlink_attacks,
+                         'requires the fd based implementation of rmtree()')
+    def test_cleanup_with_symlink_race(self):
+        # cleanup() should not operate on files outside of the temporary
+        # directory when a directory is replaced with a symlink while it
+        # recovers from a PermissionError (CVE-2026-12345).
+        with self.do_create(recurse=0) as target:
+            target_file = os.path.join(target, 'file1')
+            open(target_file, 'wb').close()
+            target_mode = os.stat(target_file).st_mode
+
+            d1 = self.do_create(recurse=0)
+            dir1 = os.path.join(d1.name, 'dir1')
+            os.mkdir(dir1)
+            open(os.path.join(dir1, 'file1'), 'wb').close()
+            # Removing contents of dir1 fails with a PermissionError, and
+            # dir1 is replaced with a symlink to target at the very moment
+            # cleanup() starts to recover from that error.
+            os.chmod(dir1, 0o500)
+            unlink = os.unlink
+            def hook(path, *, dir_fd=None):
+                try:
+                    return unlink(path, dir_fd=dir_fd)
+                except PermissionError:
+                    if not os.path.islink(dir1):
+                        os.chmod(dir1, 0o700)
+                        os.rename(dir1, dir1 + '_moved')
+                        os.symlink(target, dir1)
+                    raise
+            try:
+                with mock.patch('os.unlink', hook):
+                    with contextlib.suppress(OSError):
+                        d1.cleanup()
+            finally:
+                if os.path.islink(dir1):
+                    os.unlink(dir1)
+                    os.rename(dir1 + '_moved', dir1)
+                os.chmod(dir1, 0o700)
+                d1.cleanup()
+
+            self.assertTrue(os.path.exists(target_file))
+            self.assertEqual(os.stat(target_file).st_mode, target_mode)
+
     @support.cpython_only
     def test_del_on_collection(self):
         # A TemporaryDirectory is deleted when garbage collected
@@ -1569,6 +1614,34 @@ class TestTemporaryDirectory(BaseTestCase):
                         os.chmod(root, mode)
                     d.cleanup()
                 self.assertFalse(os.path.exists(d.name))
+
+    def test_parent_mode_preserved(self):
+        # Test that cleanup does not touch the parent directory,
+        # even if that prevents removal.
+        for mode in range(8):
+            mode <<= 6
+            with self.subTest(mode=format(mode, '03o')):
+                outer = self.do_create()
+                with outer:
+                    d = self.do_create(dir=outer.name, dirs=2, files=2,
+                                       recurse=2)
+                    with d:
+                        os.chmod(outer.name, mode)
+                        orig_mode = os.stat(outer.name).st_mode
+                        try:
+                            d.cleanup()
+                        except PermissionError:
+                            pass
+                        self.assertEqual(os.stat(outer.name).st_mode, orig_mode)
+                        outer.cleanup()
+                self.assertFalse(os.path.exists(outer.name))
+
+    @unittest.skipIf(sys.platform == 'win32', 'dirfd not used on Windows')
+    def test_cleanup_safe(self):
+        """Verify that cleanup uses the safer code path"""
+        # This is a regression test. Feel free to add exceptions for new
+        # platforms, but don't forget to update the docs.
+        self.assertTrue(tempfile._rmtree_use_dir_fd)
 
     def check_flags(self, flags):
         # skip the test if these flags are not supported (ex: FreeBSD 13)

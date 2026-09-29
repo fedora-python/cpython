@@ -417,7 +417,8 @@ def _rmtree_safe_fd(topfd, path, onerror):
             try:
                 dirfd = os.open(name, os.O_RDONLY, dir_fd=topfd)
             except OSError:
-                onerror(os.open, fullname, sys.exc_info())
+                onerror(os.open, fullname, sys.exc_info(),
+                        entry_name=name, dir_fd=topfd)
             else:
                 try:
                     if os.path.samestat(orig_st, os.fstat(dirfd)):
@@ -425,7 +426,8 @@ def _rmtree_safe_fd(topfd, path, onerror):
                         try:
                             os.rmdir(name, dir_fd=topfd)
                         except OSError:
-                            onerror(os.rmdir, fullname, sys.exc_info())
+                            onerror(os.rmdir, fullname, sys.exc_info(),
+                                    entry_name=name, dir_fd=topfd)
                     else:
                         try:
                             # This can only happen if someone replaces
@@ -434,21 +436,24 @@ def _rmtree_safe_fd(topfd, path, onerror):
                             raise OSError("Cannot call rmtree on a symbolic "
                                           "link")
                         except OSError:
-                            onerror(os.path.islink, fullname, sys.exc_info())
+                            onerror(os.path.islink, fullname, sys.exc_info(),
+                                    entry_name=name, dir_fd=topfd)
                 finally:
                     os.close(dirfd)
         else:
             try:
                 os.unlink(name, dir_fd=topfd)
             except OSError:
-                onerror(os.unlink, fullname, sys.exc_info())
+                onerror(os.unlink, fullname, sys.exc_info(),
+                        entry_name=name, dir_fd=topfd)
 
 _use_fd_functions = ({os.open, os.stat, os.unlink, os.rmdir} <=
                      os.supports_dir_fd and
                      os.listdir in os.supports_fd and
                      os.stat in os.supports_follow_symlinks)
 
-def rmtree(path, ignore_errors=False, onerror=None):
+def rmtree(path, ignore_errors=False, onerror=None, *, dir_fd=None,
+           _onexc_kwargs=False):
     """Recursively delete a directory tree.
 
     If ignore_errors is set, errors are ignored; otherwise, if onerror
@@ -460,11 +465,16 @@ def rmtree(path, ignore_errors=False, onerror=None):
 
     """
     if ignore_errors:
-        def onerror(*args):
+        def onerror(*args, **kwargs):
             pass
     elif onerror is None:
-        def onerror(*args):
+        def onerror(*args, **kwargs):
             raise
+    elif not _onexc_kwargs:
+        # Only the internal caller in tempfile asks for the extra arguments.
+        _onerror = onerror
+        def onerror(func, path, exc_info, **kwargs):
+            return _onerror(func, path, exc_info)
     if _use_fd_functions:
         # While the unsafe rmtree works fine on bytes, the fd based does not.
         if isinstance(path, bytes):
@@ -472,12 +482,12 @@ def rmtree(path, ignore_errors=False, onerror=None):
         # Note: To guard against symlink races, we use the standard
         # lstat()/open()/fstat() trick.
         try:
-            orig_st = os.lstat(path)
+            orig_st = os.stat(path, dir_fd=dir_fd, follow_symlinks=False)
         except Exception:
             onerror(os.lstat, path, sys.exc_info())
             return
         try:
-            fd = os.open(path, os.O_RDONLY)
+            fd = os.open(path, os.O_RDONLY, dir_fd=dir_fd)
         except Exception:
             onerror(os.lstat, path, sys.exc_info())
             return
@@ -485,7 +495,7 @@ def rmtree(path, ignore_errors=False, onerror=None):
             if os.path.samestat(orig_st, os.fstat(fd)):
                 _rmtree_safe_fd(fd, path, onerror)
                 try:
-                    os.rmdir(path)
+                    os.rmdir(path, dir_fd=dir_fd)
                 except OSError:
                     onerror(os.rmdir, path, sys.exc_info())
             else:

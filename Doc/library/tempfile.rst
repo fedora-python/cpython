@@ -121,6 +121,15 @@ The module defines the following user-callable items:
    The directory can be explicitly cleaned up by calling the
    :func:`cleanup` method.
 
+   .. warning::
+
+      Cleanup is not robust against the tree being modified while it is removed.
+      Files outside of the tree may have their permissions and file flags reset.
+
+      On systems where :data:`shutil.rmtree.avoids_symlink_attacks` is
+      false, manipulating symbolic links during cleanup
+      may cause files outside of the tree to be removed.
+
    .. versionadded:: 3.2
 
 
