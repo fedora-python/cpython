@@ -3049,6 +3049,9 @@ context_dealloc(PySSLContext *self)
     /* bpo-31095: UnTrack is needed before calling any callbacks */
     PyObject_GC_UnTrack(self);
     context_clear(self);
+    /* The SSL_CTX may outlive this object as the session_ctx of sockets that
+       were switched to another context; leave no Python callback behind. */
+    SSL_CTX_set_tlsext_servername_callback(self->ctx, NULL);
     SSL_CTX_free(self->ctx);
 #if HAVE_NPN
     PyMem_FREE(self->npn_protocols);
@@ -4066,7 +4069,7 @@ static int
 _servername_callback(SSL *s, int *al, void *args)
 {
     int ret;
-    PySSLContext *ssl_ctx = (PySSLContext *) args;
+    PySSLContext *ssl_ctx;
     PySSLSocket *ssl;
     PyObject *servername_o;
     PyObject *servername_idna;
@@ -4078,17 +4081,28 @@ _servername_callback(SSL *s, int *al, void *args)
     PyGILState_STATE gstate = PyGILState_Ensure();
 #endif
 
+    /* Do not use the SSL_CTX's servername arg to find the context: it is a
+       borrowed pointer to whichever _SSLContext installed the callback, and
+       that object may already be gone while OpenSSL still reaches this
+       callback through the connection's session_ctx (e.g. on the second
+       ClientHello after a HelloRetryRequest, once sni_callback has switched
+       the socket to another context).  The socket's current context is
+       always alive. */
+    ssl = SSL_get_app_data(s);
+    assert(ssl != NULL);
+    ssl_ctx = ssl->ctx;
+    Py_INCREF(ssl_ctx);
+    assert(PySSLSocket_Check(ssl));
+
     if (ssl_ctx->set_hostname == NULL) {
         /* remove race condition in this the call back while if removing the
          * callback is in progress */
+        Py_DECREF(ssl_ctx);
 #ifdef WITH_THREAD
         PyGILState_Release(gstate);
 #endif
         return SSL_TLSEXT_ERR_OK;
     }
-
-    ssl = SSL_get_app_data(s);
-    assert(PySSLSocket_Check(ssl));
 
     /* The servername callback expects an argument that represents the current
      * SSL connection and that has a .context attribute that can be changed to
@@ -4152,6 +4166,7 @@ _servername_callback(SSL *s, int *al, void *args)
         Py_DECREF(result);
     }
 
+    Py_DECREF(ssl_ctx);
 #ifdef WITH_THREAD
     PyGILState_Release(gstate);
 #endif
@@ -4159,6 +4174,7 @@ _servername_callback(SSL *s, int *al, void *args)
 
 error:
     Py_DECREF(ssl_socket);
+    Py_DECREF(ssl_ctx);
     *al = SSL_AD_INTERNAL_ERROR;
     ret = SSL_TLSEXT_ERR_ALERT_FATAL;
 #ifdef WITH_THREAD
@@ -4199,7 +4215,6 @@ _ssl__SSLContext_set_servername_callback(PySSLContext *self, PyObject *cb)
         Py_INCREF(cb);
         self->set_hostname = cb;
         SSL_CTX_set_tlsext_servername_callback(self->ctx, _servername_callback);
-        SSL_CTX_set_tlsext_servername_arg(self->ctx, self);
     }
     Py_RETURN_NONE;
 #else
