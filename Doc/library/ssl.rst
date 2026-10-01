@@ -1674,10 +1674,15 @@ to speed up repeated connections from the same clients.
    incoming BIO and write data to the outgoing BIO.
 
    The *server_side*, *server_hostname* and *session* parameters have the
-   same meaning as in :meth:`SSLContext.wrap_socket`.
+   same meaning as in :meth:`SSLContext.wrap_socket`, and are validated in
+   the same way: in particular a :exc:`ValueError` is raised when
+   :attr:`~SSLContext.check_hostname` is enabled but no *server_hostname* is
+   given, since there would be no name to match the peer's certificate
+   against.
 
    .. versionchanged:: 3.6
       *session* argument was added.
+
 
 .. method:: SSLContext.session_stats()
 

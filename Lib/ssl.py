@@ -366,6 +366,15 @@ class SSLContext(_SSLContext):
 
     def wrap_bio(self, incoming, outgoing, server_side=False,
                  server_hostname=None, session=None):
+        if server_side:
+            if server_hostname:
+                raise ValueError("server_hostname can only be specified "
+                                 "in client mode")
+            if session is not None:
+                raise ValueError("session can only be specified in "
+                                 "client mode")
+        if self.check_hostname and not server_hostname:
+            raise ValueError("check_hostname requires server_hostname")
         sslobj = self._wrap_bio(incoming, outgoing, server_side=server_side,
                                 server_hostname=server_hostname)
         return SSLObject(sslobj, session=session)
