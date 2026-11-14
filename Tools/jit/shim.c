@@ -7,7 +7,7 @@
 #include "jit.h"
 
 _Py_CODEUNIT *
-_PyJIT_Entry(
+_JIT_ENTRY(
     _PyExecutorObject *exec, _PyInterpreterFrame *frame, _PyStackRef *stack_pointer, PyThreadState *tstate
 ) {
     // Note that this is *not* a tail call

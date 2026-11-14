@@ -11,9 +11,9 @@
 
 #if defined(PY_HAVE_JIT_GDB_UNWIND)
 #  include "jit_unwind_info.h"
-#  if !JIT_UNWIND_INFO_SUPPORTED
-#    error "JIT unwind info was not generated for this target"
-#  endif
+#endif
+#ifndef JIT_UNWIND_INFO_SUPPORTED
+#  define JIT_UNWIND_INFO_SUPPORTED 0
 #endif
 
 #if defined(PY_HAVE_PERF_TRAMPOLINE) \
@@ -226,13 +226,13 @@ static void elfctx_append_uleb128(ELFObjectContext* ctx, uint32_t v) {
 // =============================================================================
 
 static void elf_init_ehframe_perf(ELFObjectContext* ctx);
-#if defined(PY_HAVE_JIT_GDB_UNWIND)
+#if defined(PY_HAVE_JIT_GDB_UNWIND) && JIT_UNWIND_INFO_SUPPORTED
 static void elf_init_ehframe_gdb(ELFObjectContext* ctx);
 #endif
 
 static inline void elf_init_ehframe(ELFObjectContext* ctx, int absolute_addr) {
     if (absolute_addr) {
-#if defined(PY_HAVE_JIT_GDB_UNWIND)
+#if defined(PY_HAVE_JIT_GDB_UNWIND) && JIT_UNWIND_INFO_SUPPORTED
         elf_init_ehframe_gdb(ctx);
 #else
         Py_UNREACHABLE();
@@ -246,6 +246,9 @@ static inline void elf_init_ehframe(ELFObjectContext* ctx, int absolute_addr) {
 size_t
 _PyJitUnwind_EhFrameSize(int absolute_addr)
 {
+    if (absolute_addr && !JIT_UNWIND_INFO_SUPPORTED) {
+        return 0;
+    }
     /* The .eh_frame we emit is small and bounded; keep a generous buffer. */
     uint8_t scratch[512];
     _Static_assert(sizeof(scratch) >= 256,
@@ -651,15 +654,14 @@ static void elf_init_ehframe_perf(ELFObjectContext* ctx) {
 /*
  * Build .eh_frame data for the GDB JIT interface.
  *
- * The executor runs inside the frame established by _PyJIT_Entry, but the
- * synthetic executor FDE collapses that state into a single logical JIT frame
- * that unwinds directly into _PyEval_*. Executor stencils never touch the
- * frame pointer - enforced by Tools/jit/_optimizers.py _validate() and
- * -mframe-pointer=reserved - so the steady-state rule is valid at every PC
- * and the FDE body is empty. Tools/jit/_targets.py derives the initial CFI
- * rules from the row active at the executor call in the compiled shim object.
+ * When generated shim CFI is available, the executor runs inside the frame
+ * established by the JIT entry shim, but the synthetic executor FDE collapses
+ * that state into a single logical JIT frame that unwinds directly into
+ * _PyEval_*. Executor stencils never touch the frame pointer - enforced by
+ * Tools/jit/_optimizers.py _validate() and -mframe-pointer=reserved - so the
+ * steady-state rule is valid at every PC and the FDE body is empty.
  */
-#if defined(PY_HAVE_JIT_GDB_UNWIND)
+#if defined(PY_HAVE_JIT_GDB_UNWIND) && JIT_UNWIND_INFO_SUPPORTED
 static void elf_init_ehframe_gdb(ELFObjectContext* ctx) {
     int fde_ptr_enc = DWRF_EH_PE_absptr;
     uint8_t* p = ctx->p;
@@ -696,7 +698,7 @@ static void elf_init_ehframe_gdb(ELFObjectContext* ctx) {
 
     ctx->p = p;
 }
-#endif
+#endif  // defined(PY_HAVE_JIT_GDB_UNWIND) && JIT_UNWIND_INFO_SUPPORTED
 
 #if defined(PY_HAVE_JIT_GDB_UNWIND)
 enum {
@@ -736,6 +738,7 @@ __jit_debug_register_code(void)
 #endif
 }
 
+#if JIT_UNWIND_INFO_SUPPORTED
 static uint16_t
 gdb_jit_machine_id(void)
 {
@@ -928,6 +931,7 @@ gdb_jit_register_code(
     PyMutex_Unlock(&_Py_jit_debug_mutex);
     return entry;
 }
+#endif  // JIT_UNWIND_INFO_SUPPORTED
 #endif  // defined(PY_HAVE_JIT_GDB_UNWIND)
 
 void *
@@ -936,7 +940,7 @@ _PyJitUnwind_GdbRegisterCode(const void *code_addr,
                              const char *entry,
                              const char *filename)
 {
-#if defined(PY_HAVE_JIT_GDB_UNWIND)
+#if defined(PY_HAVE_JIT_GDB_UNWIND) && JIT_UNWIND_INFO_SUPPORTED
     /* GDB expects a stable symbol name and absolute addresses in .eh_frame. */
     if (entry == NULL) {
         entry = "";
@@ -975,7 +979,7 @@ _PyJitUnwind_GdbRegisterCode(const void *code_addr,
 void
 _PyJitUnwind_GdbUnregisterCode(void *handle)
 {
-#if defined(PY_HAVE_JIT_GDB_UNWIND)
+#if defined(PY_HAVE_JIT_GDB_UNWIND) && JIT_UNWIND_INFO_SUPPORTED
     struct jit_code_entry *entry = (struct jit_code_entry *)handle;
     if (entry == NULL) {
         return;

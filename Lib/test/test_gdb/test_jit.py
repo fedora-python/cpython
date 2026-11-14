@@ -79,6 +79,9 @@ def setUpModule():
                      "GDB JIT CFI emitter only supports x86_64 and AArch64")
 @unittest.skipUnless(NATIVE_JIT_ENABLED,
                      "requires native JIT execution active")
+# Downstream: the JIT shim is compiled at runtime, so there is no linked
+# _PyJIT_Entry and JIT code is not registered with the GDB JIT interface.
+@unittest.skip("JIT code is not registered with the GDB JIT interface")
 class JitBacktraceTests(DebuggerTests):
     def get_stack_trace(self, **kwargs):
         # These tests validate the JIT-relevant part of the backtrace via

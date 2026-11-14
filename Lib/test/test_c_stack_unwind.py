@@ -27,6 +27,9 @@ if not support.has_subprocess_support:
 
 
 STACK_DEPTH = 10
+# Downstream: the JIT shim is compiled at runtime and JIT code is not
+# registered with unwind info, so GNU backtrace stops at JIT frames.
+JIT_UNWIND_UNSUPPORTED = "JIT frames have no registered unwind info"
 
 
 def _manual_unwind_expected(machine):
@@ -350,6 +353,8 @@ class GnuBacktraceUnwindTests(unittest.TestCase):
                 python_frames = result.get("python_frames", 0)
                 jit_frames = result.get("jit_frames", 0)
                 jit_backend = result.get("jit_backend")
+                if using_jit and jit_backend == "jit":
+                    self.skipTest(JIT_UNWIND_UNSUPPORTED)
 
                 self.assertGreaterEqual(
                     python_frames,
@@ -369,6 +374,7 @@ class GnuBacktraceUnwindTests(unittest.TestCase):
                         f"unexpected JIT frames counted in GNU backtrace with env {env}",
                     )
 
+    @unittest.skip(JIT_UNWIND_UNSUPPORTED)
     def test_gnu_backtrace_jit_frames_disappear_after_executor_free(self):
         if not (hasattr(sys, "_jit") and sys._jit.is_available()):
             self.skipTest("JIT is not available")

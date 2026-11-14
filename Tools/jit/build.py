@@ -85,14 +85,13 @@ if __name__ == "__main__":
             target.llvm_version = args.llvm_version
         if args.llvm_tools_install_dir:
             target.llvm_tools_install_dir = args.llvm_tools_install_dir
-        # Build this target's stencils, shim object, and target-specific
-        # unwind metadata before writing the generic dispatcher headers below.
+        # Build this target's stencils and target-specific unwind metadata
+        # before writing the generic dispatcher headers below.
         target.build(
             comment=comment,
             force=args.force,
             prebuilt=args.prebuilt,
             jit_stencils=args.output_dir / f"jit_stencils-{target.triple}.h",
-            jit_shim_object=args.output_dir / f"jit_shim-{target.triple}.o",
             jit_unwind_info=args.output_dir / f"jit_unwind_info-{target.triple}.h",
         )
     # Write the target dispatcher that includes the right stencil header for
