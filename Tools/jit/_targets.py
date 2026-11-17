@@ -12,7 +12,6 @@ import tempfile
 import typing
 import shlex
 
-import _dwarf
 import _llvm
 import _optimizers
 import _schema
@@ -38,27 +37,6 @@ _R = typing.TypeVar(
 )
 
 
-_ELF_UNWIND_AARCH64 = _dwarf.ELFUnwindConfig(
-    frame_pointer="W29",
-    return_address="W30",
-    register_numbers={
-        "W29": 29,
-        "W30": 30,
-    },
-    call_instruction_prefixes=("blr ",),
-)
-
-_ELF_UNWIND_X86_64 = _dwarf.ELFUnwindConfig(
-    frame_pointer="RBP",
-    return_address="RIP",
-    register_numbers={
-        "RBP": 6,
-        "RIP": 16,
-    },
-    call_instruction_prefixes=("callq ", "call "),
-)
-
-
 @dataclasses.dataclass
 class _Target(typing.Generic[_S, _R]):
     triple: str
@@ -74,7 +52,6 @@ class _Target(typing.Generic[_S, _R]):
     verbose: bool = False
     cflags: str = ""
     frame_pointers: bool = False
-    unwind: _dwarf.ELFUnwindConfig | None = None
     llvm_version: str = _llvm._LLVM_VERSION
     llvm_tools_install_dir: str | None = None
     known_symbols: dict[str, int] = dataclasses.field(default_factory=dict)
@@ -82,9 +59,6 @@ class _Target(typing.Generic[_S, _R]):
 
     def _compile_args(self) -> list[str]:
         return list(self.args)
-
-    def _shim_compile_args(self) -> list[str]:
-        return []
 
     def _get_nop(self) -> bytes:
         if re.fullmatch(r"aarch64-.*", self.triple):
@@ -247,8 +221,10 @@ class _Target(typing.Generic[_S, _R]):
             f"{s}",
             f"{c}",
         ]
+        is_shim = opname == "shim"
         if self.frame_pointers:
-            args_s += ["-Xclang", "-mframe-pointer=reserved"]
+            frame_pointer = "all" if is_shim else "reserved"
+            args_s += ["-Xclang", f"-mframe-pointer={frame_pointer}"]
         args_s += self._compile_args()
         # Allow user-provided CFLAGS to override any defaults
         args_s += shlex.split(self.cflags)
@@ -259,13 +235,14 @@ class _Target(typing.Generic[_S, _R]):
             llvm_version=self.llvm_version,
             llvm_tools_install_dir=self.llvm_tools_install_dir,
         )
-        self.optimizer(
-            s,
-            label_prefix=self.label_prefix,
-            symbol_prefix=self.symbol_prefix,
-            re_global=self.re_global,
-            frame_pointers=self.frame_pointers,
-        ).run()
+        if not is_shim:
+            self.optimizer(
+                s,
+                label_prefix=self.label_prefix,
+                symbol_prefix=self.symbol_prefix,
+                re_global=self.re_global,
+                frame_pointers=self.frame_pointers,
+            ).run()
         args_o = [f"--target={self.triple}", "-c", "-o", f"{o}", f"{s}"]
         await _llvm.run(
             "clang",
@@ -275,35 +252,6 @@ class _Target(typing.Generic[_S, _R]):
             llvm_tools_install_dir=self.llvm_tools_install_dir,
         )
         return await self._parse(o)
-
-    async def _build_shim_object(self, output: pathlib.Path) -> None:
-        with tempfile.TemporaryDirectory() as tempdir:
-            work = pathlib.Path(tempdir).resolve()
-            args_o = self._base_clang_args("shim", work)
-            args_o += self._shim_compile_args()
-            args_o += [
-                "-c",
-                # The shim is a real function in the final binary, so
-                # keep unwind info for debuggers and stack walkers.
-                "-fasynchronous-unwind-tables",
-            ]
-            if self.frame_pointers:
-                args_o += ["-Xclang", "-mframe-pointer=all"]
-            args_o += self._compile_args()
-            args_o += shlex.split(self.cflags)
-            args_o += ["-o", f"{output}", f"{TOOLS_JIT / 'shim.c'}"]
-            await _llvm.run(
-                "clang",
-                args_o,
-                echo=self.verbose,
-                llvm_version=self.llvm_version,
-                llvm_tools_install_dir=self.llvm_tools_install_dir,
-            )
-
-    async def _get_shim_unwind_info(
-        self, output: pathlib.Path
-    ) -> _dwarf.UnwindInfo | None:
-        return None
 
     async def _build_stencils(self) -> dict[str, _stencils.StencilGroup]:
         generated_cases = PYTHON_EXECUTOR_CASES_C_H.read_text()
@@ -319,6 +267,8 @@ class _Target(typing.Generic[_S, _R]):
         with tempfile.TemporaryDirectory() as tempdir:
             work = pathlib.Path(tempdir).resolve()
             async with asyncio.TaskGroup() as group:
+                coro = self._build_stencil_group("shim", TOOLS_JIT / "shim.c", work)
+                tasks.append(group.create_task(coro, name="shim"))
                 template = TOOLS_JIT_TEMPLATE_C.read_text()
                 for case, opname in cases_and_opnames:
                     # Write out a copy of the template with *only* this case
@@ -343,10 +293,9 @@ class _Target(typing.Generic[_S, _R]):
         force: bool = False,
         prebuilt: bool = False,
         jit_stencils: pathlib.Path,
-        jit_shim_object: pathlib.Path,
         jit_unwind_info: pathlib.Path,
     ) -> None:
-        """Build jit_stencils.h and the shim object in the given directory."""
+        """Build jit_stencils.h in the given directory."""
         jit_stencils.parent.mkdir(parents=True, exist_ok=True)
         if not self.stable:
             warning = f"JIT support for {self.triple} is still experimental!"
@@ -365,22 +314,17 @@ class _Target(typing.Generic[_S, _R]):
         # If every generated artifact is current, skip the expensive rebuild.
         if (
             stencils_current
-            and jit_shim_object.exists()
             and jit_unwind_info.exists()
             and jit_unwind_info.read_text().startswith(digest)
         ):
             return
-        # Build the shim first so its compiled DWARF CFI can be used to derive
-        # the unwind rules emitted into jit_unwind_info-<triple>.h.
-        ASYNCIO_RUNNER.run(self._build_shim_object(jit_shim_object))
-        unwind_info = ASYNCIO_RUNNER.run(self._get_shim_unwind_info(jit_shim_object))
         self._write_generated_header(
             jit_unwind_info,
             digest=digest,
             comment=comment,
-            lines=_writer.dump_unwind_info(unwind_info),
+            lines=_writer.dump_unwind_info(None),
         )
-        # Build the uop stencils after the shim metadata has been emitted.
+        # The shim is built as a stencil together with the uop stencils.
         if not stencils_current:
             stencil_groups = ASYNCIO_RUNNER.run(self._build_stencils())
             self._write_generated_header(
@@ -394,13 +338,6 @@ class _Target(typing.Generic[_S, _R]):
 class _COFF(
     _Target[_schema.COFFSection, _schema.COFFRelocation]
 ):  # pylint: disable = too-few-public-methods
-    def _shim_compile_args(self) -> list[str]:
-        # The shim is part of pythoncore, not a shared extension.
-        # On Windows, Py_BUILD_CORE_MODULE makes public APIs import from
-        # pythonXY.lib, which creates a self-dependency when linking
-        # pythoncore.dll. Build the shim with builtin/core semantics.
-        return ["-UPy_BUILD_CORE_MODULE", "-DPy_BUILD_CORE_BUILTIN"]
-
     def _handle_section(
         self, section: _schema.COFFSection, group: _stencils.StencilGroup
     ) -> None:
@@ -512,19 +449,6 @@ class _ELF(
     label_prefix = ".L"
     symbol_prefix = ""
     re_global = re.compile(r'\s*\.globl\s+(?P<label>[\w."$?@]+)(\s+.*)?')
-
-    async def _get_shim_unwind_info(
-        self, output: pathlib.Path
-    ) -> _dwarf.UnwindInfo | None:
-        assert self.unwind is not None
-        return await _dwarf.ELFUnwindInfo(
-            self.triple,
-            config=self.unwind,
-            verbose=self.verbose,
-            llvm_version=self.llvm_version,
-            llvm_tools_install_dir=self.llvm_tools_install_dir,
-            llvm_run=_llvm.run,
-        ).extract(output)
 
     def _handle_section(
         self, section: _schema.ELFSection, group: _stencils.StencilGroup
@@ -743,7 +667,6 @@ def get_target(host: str) -> _COFF32 | _COFF64 | _ELF | _MachO:
             args=args,
             optimizer=optimizer,
             frame_pointers=True,
-            unwind=_ELF_UNWIND_AARCH64,
         )
     elif re.fullmatch(r"i686-pc-windows-msvc", host):
         host = "i686-pc-windows-msvc"
@@ -775,7 +698,6 @@ def get_target(host: str) -> _COFF32 | _COFF64 | _ELF | _MachO:
             args=args,
             optimizer=optimizer,
             frame_pointers=True,
-            unwind=_ELF_UNWIND_X86_64,
         )
     else:
         raise ValueError(host)

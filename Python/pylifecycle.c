@@ -14,6 +14,7 @@
 #include "pycore_global_objects_fini_generated.h"  // _PyStaticObjects_CheckRefcnt()
 #include "pycore_initconfig.h"    // _PyStatus_OK()
 #include "pycore_interpolation.h" // _PyInterpolation_InitTypes()
+#include "pycore_jit.h"           // _PyJIT_Fini()
 #include "pycore_long.h"          // _PyLong_InitTypes()
 #include "pycore_moduleobject.h"  // _PyModule_InitModuleDictWatcher()
 #include "pycore_object.h"        // _PyDebug_PrintTotalRefs()
@@ -2565,6 +2566,11 @@ _Py_Finalize(_PyRuntimeState *runtime)
     // XXX Ensure finalizer errors are handled properly.
 
     finalize_interp_clear(tstate);
+
+#ifdef _Py_JIT
+    /* Free JIT shim memory */
+    _PyJIT_Fini();
+#endif
 
 #ifdef Py_TRACE_REFS
     /* Display addresses (& refcnts) of all objects still alive.
